@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="id" class="antialiased">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>UniShop — Status Deposit & Transaksi</title>
+
+  <!-- Tailwind (class-based dark mode) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+
+  <!-- Fonts & Icons (sama seperti provider.ejs) -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    /* --- Minimal tambahan styling untuk halaman status (tidak ubah header/footer) --- */
+    :root { --card-bg: #ffffff; --card-shadow: rgba(2,6,23,0.06); --accent: #6366f1; }
+    html,body { font-family:"Montserrat",system-ui,-apple-system,"Segoe UI",Roboto,Arial; }
+    body { background:#f8fafc; -webkit-font-smoothing:antialiased; }
+    .dark body { background: #071127; }
+
+    /* modern card */
+    .card {
+      background:var(--card-bg);
+      border-radius:1rem;
+      padding:1.25rem;
+      box-shadow:0 10px 30px var(--card-shadow);
+      margin-bottom:1rem;
+      border: 1px solid rgba(15,23,42,0.03);
+    }
+    .dark .card { background: #071225; --card-shadow: rgba(2,6,23,0.25); border-color: rgba(255,255,255,0.03); }
+
+    .mono-box{font-family:ui-monospace,SFMono-Regular,Menlo,Monaco,"Roboto Mono",monospace;background:#f3f4f6;padding:.35rem .6rem;border-radius:.5rem;display:inline-block}
+    .dark .mono-box { background: #041127; }
+
+    .status-pill{padding:.35rem .6rem;border-radius:999px;font-weight:600;display:inline-flex;gap:.5rem;align-items:center}
+    .input-field {width:100%;padding:0.75rem;border:1px solid #e6e8ee;border-radius:.75rem;margin-bottom:1rem;background:white;box-shadow:inset 0 1px 0 rgba(16,24,40,0.02);}
+    .dark .input-field { background:#071225; border-color:#20304a; color:#e6eefb; }
+    .btn-primary {background:linear-gradient(90deg,var(--accent),#4f46e5);color:white;padding:0.75rem 1.25rem;border-radius:.75rem;font-weight:700;cursor:pointer;border:none;width:100%;}
+    .btn-primary[disabled]{opacity:.6;cursor:not-allowed}
+    .btn-cancel {background:#ef4444;color:white;padding:0.6rem 1rem;border-radius:.75rem;font-weight:600;cursor:pointer;border:none;}
+    .btn-ghost {background:transparent;border:1px solid rgba(15,23,42,0.06);padding:.6rem 1rem;border-radius:.75rem;}
+
+    .result-area {margin-top:1rem;padding:1rem;border-radius:.75rem;background:#f9fafb;transition:all .22s ease; border: 1px solid rgba(2,6,23,0.03)}
+    .dark .result-area { background:#041225; border-color: rgba(255,255,255,0.03); }
+    .result-hidden { transform: translateY(6px) scale(.995); opacity:0; height:0; overflow:hidden; padding:0; margin:0; border:none }
+    .result-visible { transform:none; opacity:1; height:auto; padding:1rem; margin-top:1rem; }
+
+    .status-value { font-weight:700; text-transform:capitalize; }
+
+    /* layout helpers */
+    .page-container { max-width:1100px; margin-left:auto; margin-right:auto; padding-left:1rem; padding-right:1rem; }
+    @media (min-width:1024px) { .page-container { max-width:1280px; } }
+    .sticky-sidebar { position: sticky; top:96px; }
+
+    /* small responsive tweaks */
+    @media (max-width:768px){ .desktop-only{display:none} }
+    @media (min-width:769px){ .mobile-only{display:none} }
+
+    /* improve form labels spacing */
+    label.form-label { display:block; font-weight:600; margin-bottom:.5rem; color: #0f1724; }
+    .dark label.form-label { color:#e6eefb; }
+
+    /* subtle icon bg */
+    .icon-badge { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border-radius:.6rem; background:linear-gradient(180deg, rgba(99,102,241,0.12), rgba(99,102,241,0.06)); color:var(--accent); font-weight:700; }
+
+    /* keep footer & header unchanged */
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-100">
+
+  <!-- ========== HEADER (sama seperti file asli; TIDAK DIUBAH) ========== -->
+  <header class="bg-white dark:bg-slate-800 sticky top-0 z-40 shadow-sm transition-colors duration-300">
+    <div class="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 flex items-center justify-center text-white shadow-lg">
+          <i class="fa-solid fa-store text-lg"></i>
+        </div>
+        <div>
+          <div class="text-lg font-bold text-gray-900 dark:text-slate-100">UniShop <span class="text-blue-600 font-semibold">.</span></div>
+          <div class="text-xs text-gray-500 dark:text-slate-300 -mt-1">Top Up — Cepat & Aman</div>
+        </div>
+      </a>
+
+      <div class="flex items-center gap-3">
+        <button id="mobile-theme-toggle" class="md:hidden p-2 rounded-full focus:outline-none hover:bg-gray-100 dark:hover:bg-slate-700" aria-label="Ubah tema" data-mobile-theme-toggle>
+          <i id="mobile-theme-icon" class="fa-solid fa-moon text-gray-700 dark:text-slate-200"></i>
+        </button>
+        
+        <nav class="hidden md:flex items-center gap-6">
+          <a href="/" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Beranda</a>
+          <a href="https://inovixa.web.id/services" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Promo</a>
+          <a href="https://inovixa.web.id/contact" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Bantuan</a>
+          <a href="https://inovixa.web.id/privacy-policy" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Syarat & Ketentuan</a>
+        </nav>
+
+        <button id="theme-toggle" aria-label="Ubah mode: gelap / terang" role="switch" aria-checked="false"
+          class="hidden md:inline-flex ml-1 p-1 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 shadow-sm flex items-center gap-2">
+          <span class="sr-only">Toggle theme</span>
+          <span id="theme-icon" class="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-400 text-white shadow icon-rotate">
+            <i class="fa-solid fa-sun"></i>
+          </span>
+          <span id="theme-pill" class="hidden ml-1 w-10 h-5 rounded-full bg-slate-200 dark:bg-slate-600 relative toggle-pill">
+            <span id="theme-dot" class="absolute left-0 top-0.5 w-4 h-4 rounded-full bg-white dark:bg-slate-200 shadow transform translate-x-0 transition-transform"></span>
+          </span>
+        </button>
+
+        <button id="menu-toggle" class="p-2 rounded-md md:hidden focus:outline-none" aria-label="Buka menu">
+          <i class="fas fa-bars text-xl text-gray-700 dark:text-slate-200"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="mobile-menu" class="md:hidden hidden border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+      <div class="px-4 py-4 space-y-2">
+        <a href="/" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Beranda</a>
+        <a href="https://inovixa.web.id/services" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Promo</a>
+        <a href="https://inovixa.web.id/contact" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Bantuan</a>
+        <a href="https://inovixa.web.id/privacy-policy" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Syarat & Ketentuan</a>
+      </div>
+    </div>
+  </header>
+  <!-- ========== /HEADER ========== -->
+
+  <!-- ========== MAIN: improved responsive layout ========== -->
+  <main class="page-container py-8">
+    <div class="flex items-center justify-between mb-6">
+      <h1 class="text-2xl md:text-3xl font-bold">Status Deposit & Transaksi</h1>
+      <div class="hidden md:flex items-center gap-3">
+        <span class="mono-box text-sm">Support: support@unishop.web.id</span>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- main content: span 2 columns on large -->
+      <div class="lg:col-span-2 space-y-6">
+        <!-- Deposit Status Card -->
+        <section class="card">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-4">
+              <div class="icon-badge"><i class="fa-solid fa-money-bill-transfer"></i></div>
+              <div>
+                <h2 class="text-lg font-semibold">Cek Status Deposit</h2>
+                <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">Masukkan ID deposit untuk melihat status dan aksi yang tersedia.</p>
+              </div>
+            </div>
+
+            <div class="text-sm text-gray-500 dark:text-slate-400 desktop-only">
+              <div>Gunakan ID dari email / halaman transaksi</div>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+              <label for="deposit-id" class="form-label">ID Deposit</label>
+              <input type="text" id="deposit-id" placeholder="Contoh: DPT-ABCDEFG123" class="input-field" />
+            </div>
+
+            <div class="md:col-span-1 flex items-end">
+              <button id="btn-check-deposit" class="btn-primary w-full">
+                <i class="fa-solid fa-magnifying-glass mr-2"></i> Cek Status
+              </button>
+            </div>
+          </div>
+
+          <!-- result area (hidden by default, animated) -->
+          <div id="deposit-result" class="result-area result-hidden" aria-live="polite">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-semibold">Hasil Pengecekan Deposit</h3>
+                <p class="text-sm text-gray-500 dark:text-slate-400">Informasi transaksi dan tindakan yang bisa dilakukan.</p>
+              </div>
+              <div id="deposit-actions" class="flex items-center gap-3">
+                <button id="btn-download-qr" class="btn-ghost hidden"><i class="fa-solid fa-download mr-2"></i>Download QR</button>
+                <button id="btn-copy-link" class="btn-ghost hidden"><i class="fa-solid fa-link mr-2"></i>Salin Link</button>
+              </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div class="space-y-2">
+                <div class="flex justify-between"><span class="text-gray-500">ID Deposit</span><span id="deposit-detail-id" class="status-value text-gray-800 dark:text-slate-100">-</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Jumlah</span><span id="deposit-detail-amount" class="font-medium">Rp 0</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Metode</span><span id="deposit-detail-method">-</span></div>
+              </div>
+
+              <div class="space-y-2">
+                <div class="flex justify-between"><span class="text-gray-500">Status</span><span id="deposit-detail-status" class="status-value text-gray-400">-</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Tanggal</span><span id="deposit-detail-date">-</span></div>
+                <div id="deposit-extra" class="flex justify-between"><span class="text-gray-500">Info</span><span id="deposit-detail-extra">-</span></div>
+              </div>
+            </div>
+
+            <div class="mt-4 flex items-center gap-3">
+              <div id="deposit-pending-actions" class="hidden w-full">
+                <button id="btn-cancel-deposit" class="btn-cancel w-full"><i class="fa-solid fa-xmark mr-2"></i>Batalkan Deposit</button>
+              </div>
+              <div class="w-full">
+                <button id="btn-more-help" class="btn-ghost w-full" onclick="location.href='https://inovixa.web.id/contact'"><i class="fa-solid fa-headset mr-2"></i>Hubungi Support</button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Transaction Status Card -->
+        <section class="card">
+          <div class="flex items-start justify-between gap-4">
+            <div class="flex items-start gap-4">
+              <div class="icon-badge"><i class="fa-solid fa-cart-shopping"></i></div>
+              <div>
+                <h2 class="text-lg font-semibold">Cek Status Transaksi</h2>
+                <p class="text-sm text-gray-500 dark:text-slate-400 mt-1">Masukkan ID transaksi untuk melihat rincian pesanan.</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div class="md:col-span-2">
+              <label for="transaction-id" class="form-label">ID Transaksi</label>
+              <input type="text" id="transaction-id" placeholder="Contoh: TRX-123456" class="input-field" />
+            </div>
+
+            <div class="md:col-span-1 flex items-end">
+              <button id="btn-check-transaction" class="btn-primary w-full"><i class="fa-solid fa-magnifying-glass mr-2"></i> Cek Status</button>
+            </div>
+          </div>
+
+          <div id="transaction-result" class="result-area result-hidden" aria-live="polite">
+            <div class="flex items-center justify-between">
+              <div>
+                <h3 class="font-semibold">Hasil Pengecekan Transaksi</h3>
+                <p class="text-sm text-gray-500 dark:text-slate-400">Rincian produk, jumlah, dan status transaksi.</p>
+              </div>
+              <div class="text-sm text-gray-500">
+                <span class="mono-box">ID: <span id="transaction-detail-id">-</span></span>
+              </div>
+            </div>
+
+            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+              <div class="space-y-2">
+                <div class="flex justify-between"><span class="text-gray-500">Produk</span><span id="transaction-detail-product" class="font-medium">-</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Jumlah</span><span id="transaction-detail-amount" class="font-medium">Rp 0</span></div>
+              </div>
+              <div class="space-y-2">
+                <div class="flex justify-between"><span class="text-gray-500">Status</span><span id="transaction-detail-status" class="status-value text-gray-400">-</span></div>
+                <div class="flex justify-between"><span class="text-gray-500">Tanggal</span><span id="transaction-detail-date">-</span></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Small help / tips card -->
+        <section class="card hidden md:block">
+          <h3 class="font-semibold mb-2">Tips</h3>
+          <ul class="text-sm space-y-2 text-gray-600 dark:text-slate-300">
+            <li>Salin ID dari email konfirmasi atau halaman pembayaran.</li>
+            <li>Untuk deposit QRIS, gunakan tombol "Download QR" jika tersedia.</li>
+            <li>Jika transaksi tertunda lebih dari 24 jam, hubungi support.</li>
+          </ul>
+        </section>
+      </div>
+
+      <!-- sidebar (1 column) -->
+      <aside class="lg:col-span-1">
+        <div class="sticky-sidebar">
+          <div class="card">
+            <h4 class="text-lg font-semibold mb-2">Ringkasan Transaksi</h4>
+            <div class="text-sm text-gray-500 dark:text-slate-300 space-y-2">
+              <div class="flex justify-between"><span>Order terakhir</span><span id="sidebar-last-order">-</span></div>
+              <div class="flex justify-between"><span>Status populer</span><span class="text-green-500 font-semibold">success</span></div>
+              <div class="flex justify-between"><span>Metode populer</span><span class="font-medium">QRIS</span></div>
+              <div class="mt-3">
+                <button class="btn-primary w-full" onclick="location.href='/'">Buat Pesanan</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h4 class="font-semibold mb-2">Butuh Bantuan?</h4>
+            <p class="text-sm text-gray-500 dark:text-slate-300">Support tersedia 24/7. Siapkan ID transaksi jika ingin dibantu cepat.</p>
+            <div class="mt-3">
+              <a class="btn-ghost w-full inline-flex items-center justify-center" href="https://inovixa.web.id/contact"><i class="fa-solid fa-headset mr-2"></i>Hubungi Support</a>
+            </div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </main>
+  <!-- ========== /MAIN ========== -->
+
+  <!-- ========== FOOTER (TIDAK DIUBAH) ========== -->
+  <footer class="bg-gray-900 text-gray-200 dark:bg-slate-900 dark:text-slate-300 py-10">
+  <div class="container mx-auto px-4 md:px-6">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+
+      <!-- Logo & Deskripsi (ambil lebih banyak kolom di layar lebar) -->
+      <div class="md:col-span-5 lg:col-span-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 flex items-center justify-center text-white shadow-lg">
+            <i class="fa-solid fa-store text-lg" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-lg">UniShop</p>
+            <p class="text-xs text-gray-400 dark:text-slate-400 -mt-1">Solusi Top-Up Terpercaya</p>
+          </div>
+        </div>
+
+        <!-- pembatas panjang baris agar tidak melebar di desktop: max-w untuk readability -->
+        <div class="mt-3 text-xs text-gray-400 dark:text-slate-400 leading-relaxed whitespace-normal break-words" style="hyphens:auto;">
+          <p class="max-w-[65ch]">
+            UniShop adalah platform top-up terpercaya untuk <span class="font-medium text-gray-300">game online, pulsa & data, voucher digital, serta akun premium</span>.
+            Kami menghadirkan layanan cepat, aman, dan praktis dengan dukungan pelanggan 24/7.
+          </p>
+
+          <p class="mt-2 max-w-[65ch]">
+            Proyek ini dikembangkan oleh <span class="font-medium text-gray-300">PT Inovixa Technologies Solution</span> sebagai wujud inovasi digital
+            untuk memudahkan transaksi online masyarakat Indonesia.
+            Kunjungi kami di <a href="https://inovixa.web.id" target="_blank" rel="noopener" class="underline hover:text-gray-200">inovixa.web.id</a>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Link Cepat -->
+      <div class="md:col-span-2">
+        <h4 class="font-semibold mb-3">Link Cepat</h4>
+        <ul class="text-sm space-y-2 text-gray-300 dark:text-slate-300">
+          <li><a href="/" class="hover:text-white">Buat Pesanan</a></li>
+          <li><a href="https://inovixa.web.id/services" class="hover:text-white">Promo</a></li>
+          <li><a href="https://inovixa.web.id/portfolio" class="hover:text-white">FAQ</a></li>
+        </ul>
+      </div>
+
+      <!-- Bantuan -->
+      <div class="md:col-span-2">
+        <h4 class="font-semibold mb-3">Bantuan</h4>
+        <ul class="text-sm space-y-2 text-gray-300 dark:text-slate-300">
+          <li><a href="https://inovixa.web.id/contact" class="hover:text-white">Hubungi Kami</a></li>
+          <li><a href="https://inovixa.web.id/contact" class="hover:text-white">Panduan</a></li>
+          <li><a href="https://inovixa.web.id/privacy-policy" class="hover:text-white">Refund & Kebijakan</a></li>
+        </ul>
+      </div>
+
+      <!-- Ikuti Kami + Pembayaran -->
+      <div class="md:col-span-3 lg:col-span-2">
+        <h4 class="font-semibold mb-3">Ikuti Kami</h4>
+        <div class="flex flex-wrap items-center gap-3">
+          <a aria-label="LinkedIn" href="https://linkedin.com/company/inovixa-technologies" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-linkedin"></i></a>
+          <a aria-label="Facebook" href="https://www.facebook.com/share/1BWzCJNzW4" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-facebook-f"></i></a>
+          <a aria-label="Instagram" href="https://instagram.com/inovixa" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-instagram"></i></a>
+          <a aria-label="TikTok" href="https://tiktok.com/@inovixa" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-tiktok"></i></a>
+          <a aria-label="YouTube" href="https://youtube.com/@inovixa_tech" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-youtube"></i></a>
+        </div>
+
+        <!-- Pembayaran -->
+        <div class="mt-6">
+          <h5 class="text-sm font-semibold mb-2">Metode Pembayaran</h5>
+          <div class="flex gap-2 items-center">
+            <img src="/img/payment.png" alt="Payment" class="mx-auto rounded max-w-full h-auto" />
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Copyright -->
+    <div class="border-t border-gray-700 mt-8 pt-4 text-center text-xs text-gray-400 dark:text-slate-500">
+      &copy; 2025 UniShop by PT Inovixa Technologies Solution.
+    </div>
+  </div>
+</footer>
+  <!-- ========== /FOOTER ========== -->
+
+  <!-- ========== SCRIPT: theme toggle (tetap sama) ========== -->
+  <script>
+    // Theme toggle logic copied from provider.ejs so header/footer dark-mode works.
+    const THEME_KEY = 'unishop_theme';
+    const themeToggle = document.getElementById('theme-toggle');
+    const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const mobileThemeIcon = document.getElementById('mobile-theme-icon');
+    const themeDot = document.getElementById('theme-dot');
+    function applyThemeClass(theme){ if (theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }
+    function getInitialTheme(){ const saved = localStorage.getItem(THEME_KEY); if (saved === 'dark' || saved === 'light') return saved; const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; return prefersDark ? 'dark' : 'light'; }
+    function setTheme(theme, persist = true){
+      applyThemeClass(theme);
+      const isDark = theme === 'dark';
+      if (themeToggle) {
+        themeToggle.setAttribute('aria-checked', isDark ? 'true' : 'false');
+        themeIcon && (themeIcon.innerHTML = isDark ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>');
+        themeIcon && themeIcon.classList.add('rotate'); setTimeout(()=> themeIcon && themeIcon.classList.remove('rotate'), 300);
+        if (themeDot) themeDot.style.transform = isDark ? 'translateX(22px)' : 'translateX(0)';
+      }
+      if (mobileThemeIcon) mobileThemeIcon.className = isDark ? 'fa-solid fa-moon text-slate-200' : 'fa-solid fa-sun text-yellow-400';
+      if (persist) localStorage.setItem(THEME_KEY, theme);
+    }
+    function toggleTheme(){ const cur = document.documentElement.classList.contains('dark') ? 'dark' : 'light'; setTheme(cur === 'dark' ? 'light' : 'dark', true); }
+    (function initTheme(){ const initial = getInitialTheme(); setTheme(initial, false); })();
+    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+    if (themeToggle) themeToggle.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') { e.preventDefault(); toggleTheme(); } });
+    if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
+
+    // small helper: wire mobile menu toggle (kept from provider.ejs)
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (menuToggle && mobileMenu) menuToggle.addEventListener('click', ()=> mobileMenu.classList.toggle('hidden'));
+
+    // set copyright year
+    const ye = document.getElementById('currentYear'); if (ye) ye.textContent = new Date().getFullYear();
+  </script>
+
+  <!-- ========== SCRIPT: status check (asli + sedikit UX improvement) ========== -->
+  <script>
+    // DOM elements
+    const depositIdInput = document.getElementById('deposit-id');
+    const transactionIdInput = document.getElementById('transaction-id');
+    const btnCheckDeposit = document.getElementById('btn-check-deposit');
+    const btnCheckTransaction = document.getElementById('btn-check-transaction');
+    const btnCancelDeposit = document.getElementById('btn-cancel-deposit');
+    const depositResult = document.getElementById('deposit-result');
+    const transactionResult = document.getElementById('transaction-result');
+    const depositPendingActions = document.getElementById('deposit-pending-actions');
+
+    // small helpers to show/hide result with class toggle
+    function showResult(el) {
+      if (!el) return;
+      el.classList.remove('result-hidden');
+      el.classList.add('result-visible');
+      el.style.display = '';
+    }
+    function hideResult(el) {
+      if (!el) return;
+      el.classList.remove('result-visible');
+      el.classList.add('result-hidden');
+      // leave display to css transition; but ensure aria-hidden
+    }
+
+    // Format currency
+    const currencyFmt = (n) => new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR', minimumFractionDigits: 0}).format(Number(n || 0));
+
+    // Format date
+    const formatDate = (dateString) => {
+      if (!dateString) return '-';
+      const date = new Date(dateString);
+      if (isNaN(date)) return dateString;
+      return date.toLocaleDateString('id-ID', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    };
+
+    // Update status color
+    function updateStatusColor(element, status) {
+      if (!element) return;
+      element.className = 'status-value';
+      switch(String(status || '').toLowerCase()) {
+        case 'pending':
+          element.classList.add('text-yellow-400');
+          break;
+        case 'success':
+        case 'paid':
+        case 'completed':
+          element.classList.add('text-green-400');
+          break;
+        case 'cancel':
+        case 'cancelled':
+        case 'failed':
+        case 'expired':
+          element.classList.add('text-red-400');
+          break;
+        default:
+          element.classList.add('text-gray-400');
+      }
+    }
+
+    // helper to disable button while fetching
+    async function withLoading(button, fn) {
+      try {
+        button.setAttribute('disabled','');
+        const origText = button.innerHTML;
+        button.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-2"></i>Loading...';
+        await fn();
+        button.innerHTML = origText;
+      } finally {
+        button.removeAttribute('disabled');
+      }
+    }
+
+    // Check deposit status
+    async function checkDepositStatus() {
+      const depositId = depositIdInput.value.trim();
+      if (!depositId) { alert('Masukkan ID deposit terlebih dahulu'); return; }
+
+      await withLoading(btnCheckDeposit, async () => {
+        try {
+          const response = await fetch('/api/deposit-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: depositId })
+          });
+
+          const result = await response.json();
+
+          if (result.ok && result.data) {
+            const depositData = result.data.data || result.data;
+
+            // Update UI
+            document.getElementById('deposit-detail-id').textContent = depositId;
+            document.getElementById('deposit-detail-amount').textContent = currencyFmt(depositData.amount || depositData.nominal || 0);
+            document.getElementById('deposit-detail-method').textContent = depositData.method || depositData.metode || '-';
+            document.getElementById('deposit-detail-date').textContent = formatDate(depositData.date || depositData.created_at || depositData.timestamp);
+            document.getElementById('deposit-detail-extra').textContent = depositData.note || '-';
+
+            const statusElement = document.getElementById('deposit-detail-status');
+            statusElement.textContent = depositData.status || 'unknown';
+            updateStatusColor(statusElement, depositData.status);
+
+            if (String(depositData.status || '').toLowerCase() === 'pending') {
+              depositPendingActions.classList.remove('hidden');
+            } else {
+              depositPendingActions.classList.add('hidden');
+            }
+
+            // show result area
+            showResult(depositResult);
+          } else {
+            alert(result.message || 'Gagal memeriksa status deposit');
+            hideResult(depositResult);
+          }
+        } catch (error) {
+          console.error('Error checking deposit status:', error);
+          alert('Terjadi kesalahan saat memeriksa status deposit');
+        }
+      });
+    }
+
+    // Check transaction status
+    async function checkTransactionStatus() {
+      const transactionId = transactionIdInput.value.trim();
+      if (!transactionId) { alert('Masukkan ID transaksi terlebih dahulu'); return; }
+
+      await withLoading(btnCheckTransaction, async () => {
+        try {
+          const response = await fetch('/api/transaction-status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: transactionId })
+          });
+
+          const result = await response.json();
+
+          if (result.ok && result.data) {
+            const transactionData = result.data.data || result.data;
+
+            document.getElementById('transaction-detail-id').textContent = transactionId;
+            document.getElementById('transaction-detail-product').textContent = transactionData.product || transactionData.product_name || '-';
+            document.getElementById('transaction-detail-amount').textContent = currencyFmt(transactionData.amount || transactionData.price || 0);
+            document.getElementById('transaction-detail-date').textContent = formatDate(transactionData.date || transactionData.created_at || transactionData.timestamp);
+
+            const statusElement = document.getElementById('transaction-detail-status');
+            statusElement.textContent = transactionData.status || 'unknown';
+            updateStatusColor(statusElement, transactionData.status);
+
+            showResult(transactionResult);
+          } else {
+            alert(result.message || 'Gagal memeriksa status transaksi');
+            hideResult(transactionResult);
+          }
+        } catch (error) {
+          console.error('Error checking transaction status:', error);
+          alert('Terjadi kesalahan saat memeriksa status transaksi');
+        }
+      });
+    }
+
+    // Cancel deposit
+    async function cancelDeposit() {
+      const depositId = depositIdInput.value.trim();
+      if (!depositId) { alert('Tidak ada deposit yang dipilih'); return; }
+      if (!confirm('Yakin ingin membatalkan deposit ini?')) return;
+
+      try {
+        const response = await fetch('/api/deposit-cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: depositId })
+        });
+
+        const result = await response.json();
+
+        if (result.ok) {
+          alert('Deposit berhasil dibatalkan');
+          checkDepositStatus();
+        } else {
+          alert(result.message || 'Gagal membatalkan deposit');
+        }
+      } catch (error) {
+        console.error('Error cancelling deposit:', error);
+        alert('Terjadi kesalahan saat membatalkan deposit');
+      }
+    }
+
+    // Event listeners
+    if (btnCheckDeposit) btnCheckDeposit.addEventListener('click', checkDepositStatus);
+    if (btnCheckTransaction) btnCheckTransaction.addEventListener('click', checkTransactionStatus);
+    if (btnCancelDeposit) btnCancelDeposit.addEventListener('click', cancelDeposit);
+
+    // Support Enter key
+    if (depositIdInput) depositIdInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') checkDepositStatus(); });
+    if (transactionIdInput) transactionIdInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') checkTransactionStatus(); });
+
+    // Nice-to-have: prefill sidebar info if available from server (fallback)
+    (function initSidebar() {
+      const last = localStorage.getItem('unishop_last_order') || '-';
+      const el = document.getElementById('sidebar-last-order');
+      if (el) el.textContent = last;
+    })();
+  </script>
+</body>
+</html>

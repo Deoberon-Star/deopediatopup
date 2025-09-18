@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="id" class="antialiased">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>UniShop — Pilih Provider (Dark/Light Mode)</title>
+
+  <!-- Tailwind (class-based dark mode) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    :root { --accent:#2563eb; --glass-light:rgba(255,255,255,0.75); }
+    html,body { font-family: "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; }
+    .glass { background: linear-gradient(180deg, var(--glass-light), rgba(255,255,255,0.60)); backdrop-filter: blur(6px); }
+    .dark .glass { background: linear-gradient(180deg, rgba(255,255,255,0.03), rgba(255,255,255,0.02)); backdrop-filter: blur(8px); }
+    .card-img { aspect-ratio: 1.1; object-fit: cover; width: 100%; display: block; border-radius: 0.5rem 0.5rem 0 0; }
+    .provider-card { display: flex; flex-direction: column; height: 100%; }
+    .provider-card > a { display: flex; flex-direction: column; height: 100%; }
+    .provider-card .p-3 { margin-top: auto; }
+    .providers-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 0.75rem; align-items: stretch; }
+    @media (min-width: 1024px) { .providers-grid { grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; } }
+    @media (max-width: 420px) { .providers-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 0.5rem; } }
+    .focus-outline:focus { outline: 3px solid rgba(37,99,235,0.18); outline-offset: 3px; }
+    .icon-rotate { transition: transform 300ms ease; } .icon-rotate.rotate { transform: rotate(40deg) scale(1.05); }
+    .toggle-pill { transition: transform 220ms cubic-bezier(.2,.9,.2,1); }
+    .dark .card-img { filter: brightness(.9) contrast(.95); }
+    @media (max-width:768px){ .desktop-only{display:none} } @media (min-width:769px){ .mobile-only{display:none} }
+    #mobile-search .card-small { display: flex; gap: 0.75rem; align-items: center; padding: 0.5rem; border-radius: 0.75rem; background: transparent; }
+    #mobile-search .card-small img { width: 72px; height: 48px; object-fit: cover; border-radius: 0.5rem; }
+    #mobile-search .card-small h4 { margin: 0; font-size: 0.95rem; font-weight:600; color: inherit; }
+    #mobile-search .card-small p { margin: 0; font-size: 0.75rem; color: rgba(100,116,139,1); }
+    .promo-badge { box-shadow: 0 6px 18px rgba(0,0,0,0.08); }
+
+    /* styles untuk quick filters horizontal scroll */
+    .quick-filters-scroll { overflow-x: auto; -webkit-overflow-scrolling: touch; white-space: nowrap; padding-bottom: 6px; }
+    .quick-filters-scroll::-webkit-scrollbar { display: none; }
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .category-btn { display: inline-flex; align-items:center; gap:0.5rem; white-space:nowrap; flex-shrink:0; }
+
+    /* small avatar helper (mobile fallback square) */
+    .avatar-sm { width: 72px; height: 48px; display:flex; align-items:center; justify-content:center; border-radius:0.5rem; font-weight:700; font-size:0.95rem; }
+    .avatar-initial { font-weight:700; }
+  </style>
+</head>
+<body class="bg-gray-50 text-gray-800 transition-colors duration-300 dark:bg-slate-900 dark:text-slate-100">
+
+  <!-- Header -->
+  <header class="bg-white dark:bg-slate-800 sticky top-0 z-40 shadow-sm transition-colors duration-300">
+    <div class="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 flex items-center justify-center text-white shadow-lg">
+        <i class="fa-solid fa-store text-lg"></i>
+      </div>
+        <div>
+          <div class="text-lg font-bold text-gray-900 dark:text-slate-100">UniShop <span class="text-blue-600 font-semibold">.</span></div>
+          <div class="text-xs text-gray-500 dark:text-slate-300 -mt-1">Top Up — Cepat & Aman</div>
+        </div>
+      </a>
+
+      <div class="flex items-center gap-3">
+        <button id="mobile-search-btn" class="md:hidden p-2 rounded-md hover:bg-gray-100 dark:hover:bg-slate-700 focus:outline-none" aria-label="Buka pencarian">
+          <i class="fas fa-search text-gray-600 dark:text-slate-200"></i>
+        </button>
+
+        <button id="mobile-theme-toggle" class="md:hidden p-2 rounded-full focus:outline-none hover:bg-gray-100 dark:hover:bg-slate-700" aria-label="Ubah tema">
+          <i id="mobile-theme-icon" class="fa-solid fa-moon text-gray-700 dark:text-slate-200"></i>
+        </button>
+        
+        <nav class="hidden md:flex items-center gap-6">
+          <a href="/status" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Status Pesanan</a>
+          <a href="https://inovixa.web.id/services" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Promo</a>
+          <a href="https://inovixa.web.id/contact" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Bantuan</a>
+          <a href="https://inovixa.web.id/privacy-policy" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Syarat & Ketentuan</a>
+        </nav>
+
+        <button id="theme-toggle" aria-label="Ubah mode: gelap / terang" role="switch" aria-checked="false"
+          class="hidden md:inline-flex ml-1 p-1 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 shadow-sm flex items-center gap-2">
+          <span class="sr-only">Toggle theme</span>
+          <span id="theme-icon" class="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-400 text-white shadow icon-rotate">
+            <i class="fa-solid fa-sun"></i>
+          </span>
+          <span id="theme-pill" class="hidden ml-1 w-10 h-5 rounded-full bg-slate-200 dark:bg-slate-600 relative toggle-pill">
+            <span id="theme-dot" class="absolute left-0 top-0.5 w-4 h-4 rounded-full bg-white dark:bg-slate-200 shadow transform translate-x-0 transition-transform"></span>
+          </span>
+        </button>
+
+        <button id="menu-toggle" class="p-2 rounded-md md:hidden focus:outline-none" aria-label="Buka menu">
+          <i class="fas fa-bars text-xl text-gray-700 dark:text-slate-200"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="mobile-menu" class="md:hidden hidden border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+      <div class="px-4 py-4 space-y-2">
+        <div class="flex items-center justify-between">
+          <div class="hidden flex items-center gap-3">
+            <button id="mobile-theme-toggle" class="p-2 rounded-full focus:outline-none hover:bg-gray-100 dark:hover:bg-slate-700" aria-label="Ubah tema">
+              <i id="mobile-theme-icon" class="fa-solid fa-moon text-gray-700 dark:text-slate-200"></i>
+            </button>
+            <span class="text-sm text-gray-700 dark:text-slate-200">Tema</span>
+          </div>
+          <button id="mobile-search-open" class="hidden p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700 focus:outline-none" aria-label="Buka pencarian">
+            <i class="fas fa-search text-gray-700 dark:text-slate-200"></i>
+          </button>
+        </div>
+
+        <a href="/status" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Status Pesanan</a>
+        <a href="https://inovixa.web.id/services" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Promo</a>
+        <a href="https://inovixa.web.id/contact" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Bantuan</a>
+        <a href="https://inovixa.web.id/privacy-policy" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Syarat & Ketentuan</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main -->
+  <main class="container mx-auto px-4 md:px-6 py-8">
+    <!-- Mobile search overlay -->
+    <div id="mobile-search" class="fixed inset-0 z-50 hidden bg-white/95 dark:bg-slate-900/95 backdrop-blur-sm p-4">
+      <div class="max-w-xl mx-auto">
+        <div class="relative">
+          <input id="mobile-search-input" type="search" placeholder="Cari provider..." class="w-full rounded-full px-4 py-3 border border-gray-200 dark:border-slate-600 bg-white dark:bg-slate-800 dark:placeholder-slate-400 focus:ring-2 focus:ring-blue-300 focus:border-transparent" />
+          <button id="mobile-search-close" class="absolute right-2 top-2.5 p-2 rounded-full hover:bg-gray-100 dark:hover:bg-slate-700" aria-label="tutup pencarian">
+            <i class="fas fa-times text-gray-600 dark:text-slate-200"></i>
+          </button>
+        </div>
+
+        <div id="mobile-search-results" class="mt-4 grid grid-cols-1 gap-3 max-h-[60vh] overflow-auto"></div>
+
+        <div class="mt-3 text-xs text-gray-500 dark:text-slate-400">
+          Hasil akan muncul di sini saat Anda mengetik — tidak perlu menutup.
+        </div>
+      </div>
+    </div>
+
+    <!-- HERO -->
+    <section class="hidden mb-8">
+      <div class="rounded-2xl overflow-hidden shadow-md bg-gradient-to-r from-blue-600 to-purple-600 text-white p-6 md:p-10 flex flex-col md:flex-row md:items-center gap-6">
+        <div class="flex-1">
+          <h1 class="text-2xl md:text-3xl font-bold">Top Up Cepat & Terpercaya</h1>
+          <p class="mt-2 text-sm md:text-base text-white/90">Pilih provider favorit Anda. Transaksi instan dan aman dengan berbagai metode pembayaran.</p>
+          <div class="mt-4 flex gap-3">
+            <a href="#providers" class="inline-flex items-center gap-2 bg-yellow-400 text-gray-900 px-4 py-2 rounded-full font-semibold shadow hover:opacity-95">Pilih Provider <i class="fas fa-chevron-right text-sm"></i></a>
+            <a href="#" class="inline-flex items-center gap-2 border border-white/30 text-white px-4 py-2 rounded-full hover:bg-white/10">Lihat Promo</a>
+          </div>
+        </div>
+        <div class="hidden md:block w-64">
+          <img src="https://images.unsplash.com/photo-1603791440384-56cd371ee9a7?q=80&w=800&auto=format&fit=crop" alt="Top up illustration" class="rounded-xl shadow-lg w-full object-cover" loading="lazy">
+        </div>
+      </div>
+    </section>
+
+    <!-- Search (desktop) -->
+    <section class="mb-6">
+      <div class="mx-full w-full">
+        <div class="hidden md:flex items-center justify-center">
+          <label for="search" class="sr-only">Cari provider</label>
+          <div class="relative w-full max-w-full">
+            <input id="search" type="search" placeholder="Cari provider (contoh: Mobile Legends, PUBG...)" class="w-full pl-4 pr-12 py-3 rounded-full border border-gray-200 shadow-sm focus:ring-2 focus:ring-blue-300 focus:border-transparent bg-white dark:bg-slate-700 dark:border-slate-600 dark:placeholder-slate-400 dark:text-slate-100 transition-colors" />
+            <i class="fas fa-search absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 dark:text-slate-300 pointer-events-none"></i>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- TOP SELLERS (baru) -->
+    <section class="mb-6">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-lg font-semibold text-gray-800 dark:text-slate-200">Provider Terlaris</h2>
+        <a href="#providers" class="text-sm text-blue-600 hover:underline">Lihat semua</a>
+      </div>
+      <div id="top-providers-grid" class="providers-grid" aria-live="polite"></div>
+    </section>
+
+    <!-- Quick filters (dynamic) -->
+    <section class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+      <h2 class="text-lg font-semibold text-gray-800 dark:text-slate-200">Daftar Provider</h2>
+      <div id="quick-filters" class="flex items-center gap-3 w-full md:w-auto">
+        <!-- container untuk horizontal scroll -->
+        <div id="quick-filters-scroll" class="quick-filters-scroll no-scrollbar w-full md:w-auto"></div>
+      </div>
+    </section>
+
+    <!-- PROVIDERS GRID -->
+    <section id="providers" class="mb-12">
+      <div id="providers-grid" class="providers-grid" aria-live="polite"></div>
+      <div class="text-center mt-6">
+        <button id="load-more" class="px-5 py-2 rounded-full border border-blue-600 text-blue-600 bg-white dark:bg-slate-700 dark:text-slate-100 hover:bg-blue-50" style="display:none;">
+          Lihat Semua Provider
+        </button>
+      </div>
+    </section>
+
+    <!-- CTA -->
+    <section class="mb-12">
+      <div class="glass rounded-2xl p-6 md:p-8 shadow-sm border border-white/60 dark:border-slate-700">
+        <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+          <div>
+            <h3 class="text-lg font-semibold text-gray-800 dark:text-slate-100">Butuh bantuan?</h3>
+            <p class="text-sm text-gray-600 dark:text-slate-300 mt-1">Hubungi support kami 24/7 jika menemukan kendala saat top up.</p>
+          </div>
+          <div class="flex gap-3">
+            <a href="https://inovixa.web.id/contact" class="px-4 py-2 rounded-full bg-blue-600 text-white font-medium hover:opacity-95">Hubungi Support</a>
+            <a href="https://inovixa.web.id/legality" class="px-4 py-2 rounded-full border border-gray-200 dark:border-slate-600 hover:bg-gray-50 dark:hover:bg-slate-700">Legalitas</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-gray-900 text-gray-200 dark:bg-slate-900 dark:text-slate-300 py-10">
+  <div class="container mx-auto px-4 md:px-6">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+
+      <!-- Logo & Deskripsi (ambil lebih banyak kolom di layar lebar) -->
+      <div class="md:col-span-5 lg:col-span-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 flex items-center justify-center text-white shadow-lg">
+            <i class="fa-solid fa-store text-lg" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-lg">UniShop</p>
+            <p class="text-xs text-gray-400 dark:text-slate-400 -mt-1">Solusi Top-Up Terpercaya</p>
+          </div>
+        </div>
+
+        <!-- pembatas panjang baris agar tidak melebar di desktop: max-w untuk readability -->
+        <div class="mt-3 text-xs text-gray-400 dark:text-slate-400 leading-relaxed whitespace-normal break-words" style="hyphens:auto;">
+          <p class="max-w-[65ch]">
+            UniShop adalah platform top-up terpercaya untuk <span class="font-medium text-gray-300">game online, pulsa & data, voucher digital, serta akun premium</span>.
+            Kami menghadirkan layanan cepat, aman, dan praktis dengan dukungan pelanggan 24/7.
+          </p>
+
+          <p class="mt-2 max-w-[65ch]">
+            Proyek ini dikembangkan oleh <span class="font-medium text-gray-300">PT Inovixa Technologies Solution</span> sebagai wujud inovasi digital
+            untuk memudahkan transaksi online masyarakat Indonesia.
+            Kunjungi kami di <a href="https://inovixa.web.id" target="_blank" rel="noopener" class="underline hover:text-gray-200">inovixa.web.id</a>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Link Cepat -->
+      <div class="md:col-span-2">
+        <h4 class="font-semibold mb-3">Link Cepat</h4>
+        <ul class="text-sm space-y-2 text-gray-300 dark:text-slate-300">
+          <li><a href="/status" class="hover:text-white">Status Pesanan</a></li>
+          <li><a href="https://inovixa.web.id/services" class="hover:text-white">Promo</a></li>
+          <li><a href="https://inovixa.web.id/portfolio" class="hover:text-white">FAQ</a></li>
+        </ul>
+      </div>
+
+      <!-- Bantuan -->
+      <div class="md:col-span-2">
+        <h4 class="font-semibold mb-3">Bantuan</h4>
+        <ul class="text-sm space-y-2 text-gray-300 dark:text-slate-300">
+          <li><a href="https://inovixa.web.id/contact" class="hover:text-white">Hubungi Kami</a></li>
+          <li><a href="https://inovixa.web.id/contact" class="hover:text-white">Panduan</a></li>
+          <li><a href="https://inovixa.web.id/privacy-policy" class="hover:text-white">Refund & Kebijakan</a></li>
+        </ul>
+      </div>
+
+      <!-- Ikuti Kami + Pembayaran -->
+      <div class="md:col-span-3 lg:col-span-2">
+        <h4 class="font-semibold mb-3">Ikuti Kami</h4>
+        <div class="flex flex-wrap items-center gap-3">
+          <a aria-label="LinkedIn" href="https://linkedin.com/company/inovixa-technologies" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-linkedin"></i></a>
+          <a aria-label="Facebook" href="https://www.facebook.com/share/1BWzCJNzW4" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-facebook-f"></i></a>
+          <a aria-label="Instagram" href="https://instagram.com/inovixa" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-instagram"></i></a>
+          <a aria-label="TikTok" href="https://tiktok.com/@inovixa" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-tiktok"></i></a>
+          <a aria-label="YouTube" href="https://youtube.com/@inovixa_tech" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-youtube"></i></a>
+        </div>
+
+        <!-- Pembayaran -->
+        <div class="mt-6">
+          <h5 class="text-sm font-semibold mb-2">Metode Pembayaran</h5>
+          <div class="flex gap-2 items-center">
+            <img src="/img/payment.png" alt="Payment" class="mx-auto rounded max-w-full h-auto" />
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Copyright -->
+    <div class="border-t border-gray-700 mt-8 pt-4 text-center text-xs text-gray-400 dark:text-slate-500">
+      &copy; 2025 UniShop by PT Inovixa Technologies Solution.
+    </div>
+  </div>
+</footer>
+
+  <!-- Scroll top -->
+  <button id="scroll-top" class="fixed bottom-6 right-6 z-50 hidden p-4 rounded-full shadow-lg bg-white dark:bg-slate-700 hover:shadow-2xl focus:outline-none" aria-label="Scroll ke atas">
+    <i class="fas fa-chevron-up text-gray-700 dark:text-slate-200"></i>
+  </button>
+
+  <!-- ====== Client Script: dynamic data binding & interactions ====== -->
+  <script>
+    // --- Configuration ---
+    const PAGE_LIMIT = 30;
+    const MOBILE_SEARCH_LIMIT = 12;
+    // FEATURE SWITCH: apakah tunjukkan kategori "Semua"? ubah true/false di sini.
+    const SHOW_ALL_CATEGORY = true;
+
+    // --- Server-injected initial data fallback ---
+    const __INIT = <%- JSON.stringify({ categories: (typeof categories !== 'undefined' ? categories : []), providers: (typeof providers !== 'undefined' ? providers : []), rawProductsCount: (typeof rawProductsCount !== 'undefined' ? rawProductsCount : 0) }) %>;
+
+    // --- DOM refs ---
+    const quickFiltersContainer = document.getElementById('quick-filters');
+    const quickFiltersScroll = document.getElementById('quick-filters-scroll');
+    const providersGridEl = document.getElementById('providers-grid');
+    const topProvidersGridEl = document.getElementById('top-providers-grid');
+    const loadMoreBtn = document.getElementById('load-more');
+    const searchDesktopEl = document.getElementById('search');
+    const searchMobileEl = document.getElementById('mobile-search-input');
+    const mobileSearchOverlay = document.getElementById('mobile-search');
+    const mobileSearchResultsEl = document.getElementById('mobile-search-results');
+    const mobileSearchBtn = document.getElementById('mobile-search-btn');
+    const mobileSearchClose = document.getElementById('mobile-search-close');
+
+    // --- Utilities ---
+    function slugify(text) {
+      return String(text || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9\s-]/g, '').trim().replace(/\s+/g,'-').replace(/-+/g,'-');
+    }
+
+    function ensureIds(arr) {
+      const used = new Map();
+      return arr.map(item => {
+        if (item.id) return item;
+        const base = item.slug ? String(item.slug).toLowerCase() : slugify(item.name || 'provider');
+        let id = base;
+        if (used.has(base)) {
+          const cnt = used.get(base) + 1;
+          used.set(base, cnt);
+          id = `${base}-${cnt}`;
+        } else {
+          used.set(base, 0);
+        }
+        return { ...item, id };
+      });
+    }
+
+    function dedupeByKey(arr, keyFn) {
+      const seen = new Set();
+      const out = [];
+      for (const it of arr) {
+        const k = keyFn(it);
+        if (!k) continue;
+        if (!seen.has(k)) { seen.add(k); out.push(it); }
+      }
+      return out;
+    }
+
+    // Helper: get category label by id/slug
+    function getCategoryLabelById(catId) {
+      if (!categories) return '';
+      const slug = slugify(catId || '');
+      const found = categories.find(c => slugify(c.id) === slug || slugify(c.label || c.name || '') === slug);
+      return found ? (found.label || found.name || found.id) : (catId || '');
+    }
+
+    // --- Avatar / gradient helpers for 1-letter fallback ---
+    function getGradientClass(name) {
+      const palettes = [
+        'from-indigo-500 to-purple-600',
+        'from-rose-500 to-pink-500',
+        'from-yellow-400 to-orange-400',
+        'from-emerald-400 to-teal-500',
+        'from-sky-400 to-blue-600',
+        'from-fuchsia-500 to-pink-600',
+      ];
+      if (!name) return palettes[0];
+      // simple hash
+      let sum = 0;
+      for (let i = 0; i < name.length; i++) sum += name.charCodeAt(i);
+      return palettes[sum % palettes.length];
+    }
+
+    function createAvatarFallbackElement(name, opts = {}) {
+      // opts: size: 'full'|'sm'
+      const initial = (name || '').trim().charAt(0).toUpperCase() || '?';
+      const gradient = getGradientClass(name || '');
+      if (opts.size === 'sm') {
+        // small rectangular avatar for mobile results
+        const wrap = document.createElement('div');
+        wrap.className = `avatar-sm bg-gradient-to-tr ${gradient} text-white flex items-center justify-center`;
+        const span = document.createElement('span');
+        span.className = 'avatar-initial';
+        span.textContent = initial;
+        wrap.appendChild(span);
+        return wrap;
+      } else {
+        // full card top avatar with aspect-ratio 1.1
+        const wrap = document.createElement('div');
+        // reuse card-img for consistent sizing; rounded top corners kept
+        wrap.className = `card-img bg-gradient-to-tr ${gradient} flex items-center justify-center text-white`;
+        // responsive font sizes
+        wrap.style.display = 'flex';
+        const span = document.createElement('span');
+        span.className = 'text-2xl md:text-3xl font-bold';
+        span.textContent = initial;
+        wrap.appendChild(span);
+        return wrap;
+      }
+    }
+
+    // --- create DOM cards (full image OR 1-letter fallback) ---
+    function createProviderCard(p) {
+      const article = document.createElement('article');
+      article.className = 'provider-card group bg-white dark:bg-slate-800 rounded-xl shadow-sm hover:shadow-lg transition relative overflow-hidden focus-within:ring-2 focus-within:ring-blue-200 dark:focus-within:ring-slate-600';
+      article.dataset.providerId = p.id || '';
+      article.dataset.name = (p.name || '').toLowerCase();
+      article.dataset.type = (p.type || p.category || '').toLowerCase();
+
+      const a = document.createElement('a');
+      a.className = 'block focus-outline';
+      a.href = p.link || '#';
+      a.setAttribute('aria-label', `${p.name} provider`);
+      a.tabIndex = 0;
+
+      const imgWrap = document.createElement('div');
+      imgWrap.className = 'relative';
+
+      // If there's a real image, use <img>; otherwise render 1-letter avatar div
+      const imgUrl = (p.img_url || p.img || p.image || p.logo || '').toString().trim();
+      if (imgUrl) {
+        const img = document.createElement('img');
+        img.className = 'card-img';
+        img.src = imgUrl;
+        img.alt = p.name || 'Provider';
+        img.loading = 'lazy';
+        imgWrap.appendChild(img);
+      } else {
+        // fallback one-letter avatar (aspect-ratio 1.1)
+        imgWrap.appendChild(createAvatarFallbackElement(p.name || p.slug || ''));
+      }
+
+      if (p.badge) {
+        const badge = document.createElement('div');
+        badge.className = 'absolute left-3 top-3 promo-badge rounded-full bg-gradient-to-tr from-yellow-500 to-orange-500 text-white w-9 h-9 flex items-center justify-center text-sm font-bold';
+        badge.textContent = p.badge;
+        imgWrap.appendChild(badge);
+      }
+
+      const info = document.createElement('div');
+      info.className = 'p-3';
+      const h3 = document.createElement('h3');
+      h3.className = 'text-sm font-semibold text-gray-900 dark:text-slate-100';
+      h3.textContent = p.name || '';
+
+      const desc = document.createElement('p');
+      desc.className = 'text-xs text-gray-500 dark:text-slate-400 mt-1 provider-desc';
+      // description should be category name; show only when currentCategory === 'all'
+      const catLabel = getCategoryLabelById(p.type || p.category || p.group || '');
+      desc.textContent = catLabel || (p.subtitle || '');
+      desc.style.display = (currentCategory === 'all') ? '' : 'none';
+
+      const psub = document.createElement('p');
+      psub.className = 'text-xs text-gray-400 mt-1 hidden';
+
+      info.appendChild(h3);
+      info.appendChild(desc);
+      info.appendChild(psub);
+      a.appendChild(imgWrap);
+      a.appendChild(info);
+      article.appendChild(a);
+
+      // navigation behavior: when clicking provider, route to /<category>/<provider>
+      a.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        const providerSlug = p.slug || slugify(p.name || p.id || '');
+        const catForNav = (currentCategory && currentCategory !== 'all') ? currentCategory : (p.type || p.category || 'all');
+        const categorySlug = slugify(catForNav);
+        window.location.href = `/${encodeURIComponent(categorySlug)}/${encodeURIComponent(providerSlug)}`;
+      });
+
+      a.addEventListener('keydown', (e) => { if (e.key === 'Enter') a.click(); });
+
+      return article;
+    }
+
+    function createMobileResultCard(p) {
+      const a = document.createElement('a');
+      a.className = 'card-small focus-outline block bg-white dark:bg-slate-800 hover:bg-gray-50 dark:hover:bg-slate-700 p-2';
+      a.href = '#';
+      a.setAttribute('aria-label', `${p.name} provider`);
+      a.style.display = 'flex';
+      a.style.alignItems = 'center';
+      a.style.gap = '0.75rem';
+
+      const imgUrl = (p.img_url || p.img || p.image || p.logo || '').toString().trim();
+      if (imgUrl) {
+        const img = document.createElement('img');
+        img.src = imgUrl;
+        img.alt = p.name || '';
+        img.loading = 'lazy';
+        img.style.width = '72px';
+        img.style.height = '48px';
+        img.style.objectFit = 'cover';
+        img.style.borderRadius = '0.5rem';
+        a.appendChild(img);
+      } else {
+        // small rectangular avatar fallback
+        a.appendChild(createAvatarFallbackElement(p.name || p.slug || '', { size: 'sm' }));
+      }
+
+      const meta = document.createElement('div');
+      const title = document.createElement('h4');
+      title.textContent = p.name || '';
+      title.className = 'text-gray-900 dark:text-slate-100';
+      const subtitle = document.createElement('p');
+      subtitle.textContent = (currentCategory === 'all') ? (getCategoryLabelById(p.type || p.category || '') || (p.subtitle || '')) : '';
+      subtitle.className = 'text-gray-500 dark:text-slate-400 text-sm';
+
+      meta.appendChild(title);
+      meta.appendChild(subtitle);
+      a.appendChild(meta);
+
+      a.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        mobileSearchOverlay.classList.add('hidden');
+        const providerSlug = p.slug || slugify(p.name || p.id || '');
+        const catForNav = (currentCategory && currentCategory !== 'all') ? currentCategory : (p.type || p.category || 'all');
+        window.location.href = `/${encodeURIComponent(slugify(catForNav))}/${encodeURIComponent(providerSlug)}`;
+      });
+
+      return a;
+    }
+
+    // --- State ---
+    let providers = [];
+    let categories = [];
+    let currentCategory = 'all';
+    let showAll = false;
+    let searchQuery = '';
+
+    // --- Data extraction from price_list (fallback) ---
+    async function fetchPriceListAndExtract() {
+      try {
+        const resp = await fetch('/api/price-list');
+        const json = await resp.json();
+        if (!json || !json.data) return { categories: [], providers: [] };
+        const list = Array.isArray(json.data) ? json.data : [];
+        const provMap = new Map();
+        const catMap = new Map();
+        list.forEach(item => {
+          const provName = item.provider || item.layanan || item.service || item.operator || item.name;
+          const catName = item.category || item.type || item.group || item.service_type || 'other';
+          if (provName) {
+            const slug = slugify(provName);
+            if (!provMap.has(slug)) provMap.set(slug, {
+              name: provName,
+              slug,
+              img_url: item.img_url || item.img || item.image || item.logo || '',
+              subtitle: item.provider || item.layanan || '',
+              type: item.type || item.category || item.group || ''
+            });
+          }
+          if (catName) {
+            const cslug = slugify(catName);
+            if (!catMap.has(cslug)) catMap.set(cslug, { id: cslug, label: catName });
+          }
+        });
+        if (SHOW_ALL_CATEGORY) catMap.set('all', { id: 'all', label: 'Semua' });
+        const provs = Array.from(provMap.values()).map((p) => ({ ...p }));
+        const cats = Array.from(catMap.values());
+        return { categories: cats, providers: provs };
+      } catch (err) {
+        console.error('fetchPriceListAndExtract error', err);
+        return { categories: [], providers: [] };
+      }
+    }
+
+    // --- Populate categories UI ---
+    function renderCategories() {
+      if (!quickFiltersScroll) return;
+      quickFiltersScroll.innerHTML = '';
+      // render as horizontal scrollable buttons
+      categories.forEach(cat => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'category-btn px-3 py-1.5 text-sm rounded-full border border-gray-200 bg-white dark:bg-slate-700 dark:border-slate-600 dark:text-slate-200 hover:shadow-sm m-1';
+        btn.dataset.filter = cat.id;
+        btn.textContent = cat.label;
+        btn.addEventListener('click', () => {
+          // remove ring on other buttons
+          quickFiltersScroll.querySelectorAll('button').forEach(b => b.classList.remove('ring-2','ring-blue-300'));
+          btn.classList.add('ring-2','ring-blue-400');
+          currentCategory = cat.id;
+          showAll = false;
+          applyFiltersAndRender();
+          const providersSection = document.getElementById('providers');
+          if (providersSection) providersSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        });
+        quickFiltersScroll.appendChild(btn);
+      });
+      // set default selected
+      const defaultBtn = quickFiltersScroll.querySelector('button[data-filter="all"]') || quickFiltersScroll.querySelector('button');
+      if (defaultBtn) defaultBtn.classList.add('ring-2','ring-blue-300');
+    }
+
+    // --- Filtering & rendering providers on the same page ---
+    function computeFiltered() {
+      const q = (searchQuery || '').trim().toLowerCase();
+      const curSlug = slugify(currentCategory || '');
+      return providers.filter(p => {
+        const provTypeRaw = (p.type || p.category || '').toString();
+        const provTypeSlug = slugify(provTypeRaw);
+        const matchCat = (!curSlug || curSlug === 'all') ? true : (provTypeSlug === curSlug || slugify(p.type || '') === curSlug);
+        const matchQ = q === '' || (p.name && p.name.toLowerCase().includes(q)) || (p.subtitle && p.subtitle.toLowerCase().includes(q));
+        return matchCat && matchQ;
+      });
+    }
+
+    function showNoResultsInMain() {
+      providersGridEl.innerHTML = '';
+      const no = document.createElement('div');
+      no.className = 'col-span-full text-center text-sm text-gray-500 dark:text-slate-400';
+      no.innerHTML = `<p>Tidak ada provider yang cocok.</p>`;
+      providersGridEl.appendChild(no);
+    }
+
+    function renderVisibleProviders(filtered) {
+      providersGridEl.innerHTML = '';
+      if (!filtered.length) { showNoResultsInMain(); return; }
+      let toShow = filtered;
+      if (currentCategory === 'all' && !showAll) toShow = filtered.slice(0, PAGE_LIMIT);
+      toShow.forEach(p => providersGridEl.appendChild(createProviderCard(p)));
+    }
+
+    function updateLoadMoreVisibility(filteredCount) {
+      if (!loadMoreBtn) return;
+      if (currentCategory === 'all' && filteredCount > PAGE_LIMIT) {
+        loadMoreBtn.style.display = '';
+        loadMoreBtn.textContent = showAll ? 'Lihat Lebih Sedikit' : 'Lihat Semua Provider';
+      } else {
+        loadMoreBtn.style.display = 'none';
+        showAll = false;
+      }
+    }
+
+    // --- Tambahan: sembunyikan / tampilkan section Top Providers saat ada query di desktop ---
+function updateTopProvidersVisibility() {
+  try {
+    // dapatkan section induk dari grid top providers
+    const topGrid = document.getElementById('top-providers-grid');
+    if (!topGrid) return;
+    const topSection = topGrid.closest('section');
+    if (!topSection) return;
+
+    // desktop breakpoint sesuai css: min-width:769px
+    const isDesktop = window.matchMedia('(min-width:769px)').matches;
+    const hasQuery = (searchQuery || '').trim().length > 0;
+
+    // hanya sembunyikan ketika desktop + ada query
+    if (isDesktop && hasQuery) {
+      topSection.style.display = 'none';
+    } else {
+      topSection.style.display = '';
+    }
+  } catch (err) {
+    console.error('updateTopProvidersVisibility error', err);
+  }
+}
+
+// --- Integrasi: panggil setiap kali kita re-render daftar / search berubah ---
+function applyFiltersAndRender() {
+  const filtered = computeFiltered();
+  renderVisibleProviders(filtered);
+  updateLoadMoreVisibility(filtered.length);
+  // update mobile overlay results jika terbuka
+  if (mobileSearchOverlay && !mobileSearchOverlay.classList.contains('hidden')) {
+    renderMobileSearchResults(filtered);
+  }
+  // update visibility top providers (sesuai rule)
+  updateTopProvidersVisibility();
+}
+
+// pastikan dipanggil juga saat inisialisasi / resize
+window.addEventListener('resize', debounce(() => updateTopProvidersVisibility(), 140));
+
+    // mobile overlay results
+    function renderMobileSearchResults(filtered) {
+      if (!mobileSearchResultsEl) return;
+      mobileSearchResultsEl.innerHTML = '';
+      if (!filtered.length) {
+        const el = document.createElement('div');
+        el.className = 'text-center text-sm text-gray-500 dark:text-slate-400';
+        el.textContent = 'Tidak ada provider yang cocok.';
+        mobileSearchResultsEl.appendChild(el);
+        return;
+      }
+      const toShow = filtered.slice(0, MOBILE_SEARCH_LIMIT);
+      toShow.forEach(p => mobileSearchResultsEl.appendChild(createMobileResultCard(p)));
+    }
+
+    // --- NEW: render Top Providers (Provider Terlaris) ---
+    function renderTopProviders() {
+      if (!topProvidersGridEl) return;
+      // urutan sesuai permintaan
+      const desiredOrder = ['dramabox', 'alight motion', 'disney', 'magic chess: go go'];
+      // peta fallback images (unused now, kept for compatibility)
+      const topList = desiredOrder.map(nameKey => {
+        // cari di providers berdasarkan kecocokan kata
+        const found = providers.find(p => (p.name || '').toLowerCase().includes(nameKey) || (p.slug || '').toLowerCase().includes(nameKey));
+        if (found) return found;
+        // fallback objek jika tidak ada (no image -> will show 1-letter avatar)
+        return {
+          id: slugify(nameKey),
+          slug: slugify(nameKey),
+          name: nameKey.split(' ').map(w => w[0].toUpperCase() + w.slice(1)).join(' '),
+          img_url: '',
+          subtitle: '',
+          type: ''
+        };
+      });
+
+      topProvidersGridEl.innerHTML = '';
+      topList.forEach(p => {
+        const normalized = { ...p, id: p.id || p.slug || slugify(p.name || '') };
+        topProvidersGridEl.appendChild(createProviderCard(normalized));
+      });
+    }
+
+    // debounce util
+    function debounce(fn, ms = 180) {
+      let t;
+      return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), ms); };
+    }
+
+    // search wiring
+    if (searchDesktopEl) {
+      searchDesktopEl.addEventListener('input', debounce((e) => {
+        searchQuery = e.target.value || '';
+        showAll = false;
+        applyFiltersAndRender();
+      }, 180));
+    }
+    if (searchMobileEl) {
+      searchMobileEl.addEventListener('input', debounce((e) => {
+        searchQuery = e.target.value || '';
+        if (searchDesktopEl) searchDesktopEl.value = searchQuery;
+        showAll = false;
+        applyFiltersAndRender();
+        const filtered = computeFiltered();
+        renderMobileSearchResults(filtered);
+      }, 120));
+    }
+
+    // load more
+    if (loadMoreBtn) {
+      loadMoreBtn.addEventListener('click', () => {
+        showAll = !showAll;
+        applyFiltersAndRender();
+        if (!showAll) {
+          const providersSection = document.getElementById('providers');
+          if (providersSection) providersSection.scrollIntoView({behavior:'smooth', block:'start'});
+        }
+      });
+    }
+
+    // mobile overlay open/close
+    function openMobileSearch() {
+      if (!mobileSearchOverlay) return;
+      mobileSearchOverlay.classList.remove('hidden');
+      setTimeout(() => { searchMobileEl && searchMobileEl.focus(); }, 50);
+      const filtered = computeFiltered();
+      renderMobileSearchResults(filtered);
+    }
+    function closeMobileSearch() {
+      if (!mobileSearchOverlay) return;
+      mobileSearchOverlay.classList.add('hidden');
+    }
+    mobileSearchBtn && mobileSearchBtn.addEventListener('click', openMobileSearch);
+    mobileSearchClose && mobileSearchClose.addEventListener('click', closeMobileSearch);
+
+    // theme, menu, scroll small helpers
+    const yearEl = document.getElementById('currentYear'); if (yearEl) yearEl.textContent = new Date().getFullYear();
+    const menuToggle = document.getElementById('menu-toggle'); const mobileMenu = document.getElementById('mobile-menu');
+    if (menuToggle && mobileMenu) {
+      menuToggle.addEventListener('click', () => mobileMenu.classList.toggle('hidden'));
+      mobileMenu.addEventListener('click', (e) => { if (e.target.tagName === 'A' || e.target.closest('a')) mobileMenu.classList.add('hidden'); });
+    }
+    const THEME_KEY = 'unishop_theme'; const themeToggle = document.getElementById('theme-toggle'); const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+    const themeIcon = document.getElementById('theme-icon'); const mobileThemeIcon = document.getElementById('mobile-theme-icon'); const themeDot = document.getElementById('theme-dot');
+    function applyThemeClass(theme){ if (theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }
+    function getInitialTheme(){ const saved = localStorage.getItem(THEME_KEY); if (saved === 'dark' || saved === 'light') return saved; const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; return prefersDark ? 'dark' : 'light'; }
+    function setTheme(theme, persist = true){ applyThemeClass(theme); const isDark = theme === 'dark'; if (themeToggle) { themeToggle.setAttribute('aria-checked', isDark ? 'true' : 'false'); themeIcon && (themeIcon.innerHTML = isDark ? '<i class=\"fa-solid fa-moon\"></i>' : '<i class=\"fa-solid fa-sun\"></i>'); themeIcon && themeIcon.classList.add('rotate'); setTimeout(()=> themeIcon && themeIcon.classList.remove('rotate'), 300); if (themeDot) themeDot.style.transform = isDark ? 'translateX(22px)' : 'translateX(0)'; } if (mobileThemeIcon) mobileThemeIcon.className = isDark ? 'fa-solid fa-moon text-slate-200' : 'fa-solid fa-sun text-yellow-400'; if (persist) localStorage.setItem(THEME_KEY, theme); }
+    function toggleTheme(){ const cur = document.documentElement.classList.contains('dark') ? 'dark' : 'light'; setTheme(cur === 'dark' ? 'light' : 'dark', true); }
+    (function initTheme(){ const initial = getInitialTheme(); setTheme(initial, false); })();
+    themeToggle && themeToggle.addEventListener('click', toggleTheme);
+    themeToggle && themeToggle.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') { e.preventDefault(); toggleTheme(); } });
+    mobileThemeToggle && mobileThemeToggle.addEventListener('click', toggleTheme);
+    const mql = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    if (mql && !localStorage.getItem(THEME_KEY)) { mql.addEventListener ? mql.addEventListener('change', e => setTheme(e.matches ? 'dark' : 'light', false)) : mql.addListener(e => setTheme(e.matches ? 'dark' : 'light', false)); }
+    const scrollTopBtn = document.getElementById('scroll-top');
+    if (scrollTopBtn) {
+      window.addEventListener('scroll', () => { if (window.scrollY > 300) scrollTopBtn.classList.remove('hidden'); else scrollTopBtn.classList.add('hidden'); });
+      scrollTopBtn.addEventListener('click', () => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') { if (mobileMenu) mobileMenu.classList.add('hidden'); if (mobileSearchOverlay) mobileSearchOverlay.classList.add('hidden'); }
+    });
+
+    // --- Initialization: use injected data or fetch backend if empty ---
+    (async function init() {
+      try {
+        // normalize and populate providers & categories
+        if (__INIT && Array.isArray(__INIT.providers) && __INIT.providers.length) {
+          providers = ensureIds(__INIT.providers.map(p => {
+            const name = p.name || p.provider || p.layanan || p.title || '';
+            const typeRaw = (p.type || p.category || p.group || '') || '';
+            return {
+              name,
+              img_url: p.img_url || p.img || p.image || p.logo || '',
+              img: p.img || p.image || p.logo || '',
+              subtitle: p.subtitle || p.provider || '',
+              type: typeRaw.toString(),
+              typeSlug: slugify(typeRaw || ''),
+              slug: p.slug || (name ? slugify(name) : ''),
+              id: p.id || undefined
+            };
+          }));
+          // incoming categories (server-injected)
+          const incomingCats = (__INIT.categories && __INIT.categories.length ? __INIT.categories : []);
+          const mappedCats = incomingCats.map(c => ({ id: c.id || slugify(c.label || c.name || 'all'), label: c.label || c.name || c.id }));
+          categories = mappedCats;
+        } else {
+          // fallback: fetch /api/price-list and extract providers & categories
+          const extracted = await fetchPriceListAndExtract();
+          categories = extracted.categories.length ? extracted.categories : [];
+          providers = extracted.providers.map(p => ({
+            name: p.name,
+            img_url: p.img_url || p.img || '',
+            subtitle: p.subtitle || '',
+            type: p.type || '',
+            typeSlug: slugify(p.type || ''),
+            slug: p.slug || slugify(p.name || '')
+          }));
+          providers = ensureIds(providers);
+          categories = categories.map(c => ({ id: c.id || slugify(c.label || c.name || 'all'), label: c.label || c.name || c.id }));
+        }
+      } catch (err) {
+        console.error('init data error', err);
+        categories = [];
+        providers = [];
+      }
+
+      // Normalize provider.typeSlug for safety
+      providers = providers.map(p => ({ ...p, type: (p.type || '').toString(), typeSlug: p.typeSlug || slugify(p.type || '') }));
+
+      // Build category set from providers (only keep categories that have at least one provider)
+      const provTypes = new Set(providers.map(p => slugify(p.type || p.typeSlug || '')).filter(Boolean));
+      // Map incoming categories to normalized form and filter empty ones
+      let normalizedCats = (categories || []).map(c => ({ id: slugify(c.id || c.label || c.name || ''), label: c.label || c.name || c.id || '' }));
+      // If SHOW_ALL_CATEGORY true, ensure 'all' present at beginning
+      if (SHOW_ALL_CATEGORY) {
+        normalizedCats = normalizedCats.filter(c => c.id !== 'all'); // remove any 'all' duplicates first
+        normalizedCats.unshift({ id: 'all', label: 'Semua' });
+      }
+      // Filter out categories that don't have providers (except 'all' when enabled)
+      normalizedCats = normalizedCats.filter(c => {
+        if (c.id === 'all' && SHOW_ALL_CATEGORY) return true;
+        return provTypes.has(c.id);
+      });
+      // Deduplicate just in case
+      normalizedCats = dedupeByKey(normalizedCats, c => slugify(c.id || c.label || c.name || ''));
+      categories = normalizedCats;
+
+      // If after filtering there is no category but providers exist, create categories from provider types
+      if (!categories.length && providers.length) {
+        const inferred = Array.from(provTypes).map(s => ({ id: s, label: (s === 'all' ? 'Semua' : s) }));
+        if (SHOW_ALL_CATEGORY) inferred.unshift({ id: 'all', label: 'Semua' });
+        categories = dedupeByKey(inferred, c => c.id);
+      }
+
+      // Make sure one and only one 'all' exists if SHOW_ALL_CATEGORY true
+      if (SHOW_ALL_CATEGORY) {
+        // ensure 'all' is first
+        categories = categories.filter((c, i) => slugify(c.id) !== 'all' || i === 0 ? true : false);
+        if (!categories.length || slugify(categories[0].id) !== 'all') {
+          categories.unshift({ id: 'all', label: 'Semua' });
+        }
+      } else {
+        // remove any 'all' if feature turned off
+        categories = categories.filter(c => slugify(c.id) !== 'all');
+      }
+
+      // finally ensure unique ids again
+      categories = dedupeByKey(categories, c => slugify(c.id || c.label || ''));
+
+      // render UI
+      renderCategories();
+      applyFiltersAndRender();
+
+      // render top providers AFTER providers normalized
+      renderTopProviders();
+    })();
+  </script>
+</body>
+</html>

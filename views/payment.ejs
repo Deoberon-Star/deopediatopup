@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="id" class="antialiased">
+<head>
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width,initial-scale=1"/>
+  <title>UniShop — Pembayaran</title>
+
+  <!-- Tailwind (class-based dark mode) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>tailwind.config = { darkMode: 'class' };</script>
+
+  <!-- Fonts & Icons -->
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <style>
+    html,body { font-family: "Montserrat", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+    :root{ --card-bg: #ffffff; --muted: #6b7280; }
+    .card { background: var(--card-bg); border-radius: 1rem; padding: 1rem; box-shadow: 0 8px 22px rgba(2,6,23,0.06); }
+    .mono-box{ font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, "Roboto Mono", monospace; background:#f3f4f6; padding:.45rem .7rem; border-radius:.5rem; display:inline-block; font-weight:600 }
+    .status-pill{ padding:.35rem .6rem; border-radius:999px; font-weight:600; display:inline-flex; gap:.5rem; align-items:center }
+    .method-badge { padding:.25rem .6rem; border-radius:.75rem; font-weight:600; display:inline-flex; gap:.5rem; align-items:center; font-size:.85rem; }
+    .skeleton { background: linear-gradient(90deg, rgba(0,0,0,0.04) 25%, rgba(0,0,0,0.06) 50%, rgba(0,0,0,0.04) 75%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite; border-radius: .5rem; }
+    @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+    /* Dark variants */
+    .dark .card { background: #071024; box-shadow: 0 10px 30px rgba(2,6,23,0.3); }
+    .dark .mono-box { background: #0b1220; color: #e6eefb; }
+    .dark .skeleton { background: linear-gradient(90deg, rgba(255,255,255,0.02) 25%, rgba(255,255,255,0.04) 50%, rgba(255,255,255,0.02) 75%); }
+    @media (max-width:768px){ .desktop-only{ display:none } }
+    /* small toast */
+    #toast {
+      position: fixed;
+      left: 50%;
+      transform: translateX(-50%);
+      bottom: 24px;
+      z-index: 60;
+      display: none;
+      padding: .6rem .9rem;
+      border-radius: .6rem;
+      box-shadow: 0 6px 20px rgba(2,6,23,0.2);
+      font-size: .95rem;
+    }
+    /* accessibility focus */
+    .focus-outline:focus { outline: 3px solid rgba(99,102,241,0.18); outline-offset: 2px; }
+    /* responsive payment area min-height */
+    .payment-min { min-height: 220px; }
+  </style>
+</head>
+<body class="bg-gray-50 dark:bg-slate-900 text-gray-800 dark:text-slate-100">
+
+  <!-- HEADER (DI JAGA SAMA PENGGUNA — TIDAK DIRUBAH) -->
+  <header class="bg-white dark:bg-slate-800 sticky top-0 z-40 shadow-sm transition-colors duration-300">
+    <div class="container mx-auto px-4 md:px-6 py-3 flex items-center justify-between">
+      <a href="/" class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 flex items-center justify-center text-white shadow-lg">
+          <i class="fa-solid fa-store text-lg"></i>
+        </div>
+        <div>
+          <div class="text-lg font-bold text-gray-900 dark:text-slate-100">UniShop <span class="text-blue-600 font-semibold">.</span></div>
+          <div class="text-xs text-gray-500 dark:text-slate-300 -mt-1">Top Up — Cepat & Aman</div>
+        </div>
+      </a>
+
+      <div class="flex items-center gap-3">
+        <button id="mobile-theme-toggle" class="md:hidden p-2 rounded-full focus:outline-none hover:bg-gray-100 dark:hover:bg-slate-700" aria-label="Ubah tema" data-mobile-theme-toggle>
+          <i id="mobile-theme-icon" class="fa-solid fa-moon text-gray-700 dark:text-slate-200"></i>
+        </button>
+
+        <nav class="hidden md:flex items-center gap-6">
+          <a href="/" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Beranda</a>
+          <a href="/status" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Status Pesanan</a>
+          <a href="https://inovixa.web.id/services" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Promo</a>
+          <a href="https://inovixa.web.id/contact" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Bantuan</a>
+          <a href="https://inovixa.web.id/privacy-policy" class="text-sm font-medium text-gray-700 dark:text-slate-300 nav-link focus-outline">Syarat & Ketentuan</a>
+        </nav>
+
+        <button id="theme-toggle" aria-label="Ubah mode: gelap / terang" role="switch" aria-checked="false"
+          class="hidden md:inline-flex ml-1 p-1 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-300 bg-white dark:bg-slate-700 border border-gray-200 dark:border-slate-600 shadow-sm items-center gap-2">
+          <span class="sr-only">Toggle theme</span>
+          <span id="theme-icon" class="flex items-center justify-center w-9 h-9 rounded-full bg-gradient-to-tr from-yellow-400 to-orange-400 text-white shadow icon-rotate">
+            <i class="fa-solid fa-sun"></i>
+          </span>
+        </button>
+
+        <button id="menu-toggle" class="p-2 rounded-md md:hidden focus:outline-none" aria-label="Buka menu">
+          <i class="fas fa-bars text-xl text-gray-700 dark:text-slate-200"></i>
+        </button>
+      </div>
+    </div>
+
+    <div id="mobile-menu" class="md:hidden hidden border-t border-gray-100 dark:border-slate-700 bg-white dark:bg-slate-800">
+      <div class="px-4 py-4 space-y-2">
+        <a href="/" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Beranda</a>
+        <a href="/status" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Status Pesanan</a>
+        <a href="https://inovixa.web.id/services" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Promo</a>
+        <a href="https://inovixa.web.id/contact" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Bantuan</a>
+        <a href="https://inovixa.web.id/privacy-policy" class="block py-2 px-2 rounded-md hover:bg-gray-50 dark:hover:bg-slate-700">Syarat & Ketentuan</a>
+      </div>
+    </div>
+  </header>
+  <!-- /HEADER -->
+
+  <!-- MAIN CONTENT (REVISI: RESPONSIVE, MODERN, AESTHETIC) -->
+  <main class="container mx-auto p-4 md:p-8">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Left: payment visual (spans 2 columns on lg) -->
+      <section class="lg:col-span-3">
+        <div class="card">
+          <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div>
+              <h1 id="title-product" class="text-xl md:text-2xl font-semibold">Pembayaran</h1>
+              <div id="subtitle" class="text-sm text-gray-500 dark:text-slate-300 mt-1">
+                Selesaikan pembayaran dalam waktu
+                <span id="subtitle-minutes" class="font-semibold">-</span>
+                <span id="subtitle-seconds" class="text-xs text-gray-400 ml-2"></span>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-3">
+              <div class="text-xs text-gray-500 dark:text-slate-400 mr-2">Transaction ID</div>
+              <div class="flex items-center gap-2">
+                <div id="detail-reff" class="mono-box"><%= trx_id || '-' %></div>
+                <button id="btn-copy-trx" title="Salin Transaction ID" class="p-2 rounded-md bg-gray-100 dark:bg-slate-700 focus-outline">
+                  <i class="fa-solid fa-copy"></i>
+                </button>
+                <div id="method-badge-wrapper" class="hidden md:block"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+            <!-- Payment visual / QR / VA — takes 2 cols on md+ -->
+            <div class="md:col-span-2">
+              <div id="payment-area" class="text-center p-4 border border-dashed rounded-lg bg-white dark:bg-slate-900 payment-min flex flex-col items-center justify-center">
+                <div id="pay-loading" class="w-full max-w-md">
+                  <div class="skeleton h-48 rounded-lg mx-auto"></div>
+                  <div class="mt-3 text-sm text-gray-500 dark:text-slate-300">Memuat data pembayaran...</div>
+                </div>
+              </div>
+
+              <div class="mt-3 flex flex-wrap gap-2 items-center">
+                <button id="btn-download-qr" class="px-4 py-2 rounded bg-gray-100 dark:bg-slate-800 hidden items-center gap-2 focus-outline" aria-hidden>
+                  <i class="fa-solid fa-download"></i><span class="ml-1">Download QR</span>
+                </button>
+
+                <!-- Copy link (visible mobile/desktop) -->
+                <button id="btn-copy-link" class="px-4 py-2 rounded bg-indigo-600 text-white inline-flex items-center gap-2 focus-outline" aria-hidden>
+                  <i class="fa-solid fa-link"></i><span class="hidden sm:inline">Salin Link</span>
+                </button>
+
+                <!-- Copy VA/Bank -->
+                <button id="btn-copy-va" class="px-4 py-2 rounded bg-indigo-600 text-white inline-flex items-center gap-2 focus-outline">
+                  <i class="fa-solid fa-credit-card"></i><span class="hidden sm:inline">Salin VA/Rek</span>
+                </button>
+
+                <!-- Open payment -->
+                <a id="btn-open-payment" target="_blank" rel="noopener" class="px-4 py-2 rounded bg-emerald-600 text-white inline-flex items-center gap-2 hidden focus-outline">
+                  <i class="fa-solid fa-arrow-up-right-from-square"></i><span class="hidden sm:inline">Buka Pembayaran</span>
+                </a>
+
+                <!-- Small hint -->
+                <div id="payment-hint" class="text-xs text-gray-500 dark:text-slate-300 mt-2 w-full"></div>
+              </div>
+            </div>
+
+            <!-- Right: summary box (aside) -->
+            <aside class="card">
+              <div class="flex items-start justify-between gap-3">
+                <div>
+                  <h3 class="font-semibold mb-1">Rincian</h3>
+                  <p class="text-xs text-gray-500 dark:text-slate-300">Pastikan detail sesuai sebelum melakukan transfer.</p>
+                </div>
+                <div id="method-icon" class="hidden md:flex items-center"></div>
+              </div>
+
+              <dl class="text-sm space-y-2 mt-3">
+                <div class="flex justify-between"><dt>Produk</dt><dd id="detail-product">-</dd></div>
+                <div class="flex justify-between"><dt>Harga</dt><dd id="detail-price">Rp 0</dd></div>
+                <div class="flex justify-between"><dt>Target</dt><dd id="detail-target">-</dd></div>
+                <div class="flex justify-between items-center"><dt>Metode</dt><dd id="detail-method" class="flex items-center gap-2">-</dd></div>
+                <div class="flex justify-between"><dt>Status</dt><dd id="detail-status">Menunggu</dd></div>
+                <div class="flex justify-between"><dt>Waktu tersisa</dt><dd id="detail-countdown">-</dd></div>
+              </dl>
+
+              <div class="mt-4 grid gap-2">
+                <button id="btn-check" class="w-full px-4 py-2 rounded bg-emerald-600 text-white focus-outline">
+                  <i class="fa-solid fa-check mr-2"></i> Saya Sudah Bayar
+                </button>
+                <button id="btn-cancel" class="w-full px-4 py-2 rounded bg-white border text-red-600 focus-outline">
+                  <i class="fa-solid fa-xmark mr-2"></i> Batalkan
+                </button>
+              </div>
+
+              <div id="msg" class="mt-3 text-sm text-gray-600 dark:text-slate-300"></div>
+            </aside>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Right column: bantuan / contact (stacked under on mobile) -->
+      <aside>
+        <div class="card">
+          <h4 class="font-semibold mb-2">Bantuan</h4>
+          <p class="text-sm text-gray-600 dark:text-slate-300">Jika ada masalah, berikan Transaction ID kepada support.</p>
+          <div class="mt-3">
+            <div class="text-xs text-gray-500 dark:text-slate-400">Support</div>
+            <div class="font-medium">support@unishop.web.id</div>
+          </div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- FOOTER (DI JAGA SAMA PENGGUNA — TIDAK DIRUBAH) -->
+  <footer class="bg-gray-900 text-gray-200 dark:bg-slate-900 dark:text-slate-300 py-10">
+  <div class="container mx-auto px-4 md:px-6">
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-8 items-start">
+
+      <!-- Logo & Deskripsi (ambil lebih banyak kolom di layar lebar) -->
+      <div class="md:col-span-5 lg:col-span-6">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-indigo-600 to-pink-500 flex items-center justify-center text-white shadow-lg">
+            <i class="fa-solid fa-store text-lg" aria-hidden="true"></i>
+          </div>
+          <div>
+            <p class="font-semibold text-lg">UniShop</p>
+            <p class="text-xs text-gray-400 dark:text-slate-400 -mt-1">Solusi Top-Up Terpercaya</p>
+          </div>
+        </div>
+
+        <!-- pembatas panjang baris agar tidak melebar di desktop: max-w untuk readability -->
+        <div class="mt-3 text-xs text-gray-400 dark:text-slate-400 leading-relaxed whitespace-normal break-words" style="hyphens:auto;">
+          <p class="max-w-[65ch]">
+            UniShop adalah platform top-up terpercaya untuk <span class="font-medium text-gray-300">game online, pulsa & data, voucher digital, serta akun premium</span>.
+            Kami menghadirkan layanan cepat, aman, dan praktis dengan dukungan pelanggan 24/7.
+          </p>
+
+          <p class="mt-2 max-w-[65ch]">
+            Proyek ini dikembangkan oleh <span class="font-medium text-gray-300">PT Inovixa Technologies Solution</span> sebagai wujud inovasi digital
+            untuk memudahkan transaksi online masyarakat Indonesia.
+            Kunjungi kami di <a href="https://inovixa.web.id" target="_blank" rel="noopener" class="underline hover:text-gray-200">inovixa.web.id</a>.
+          </p>
+        </div>
+      </div>
+
+      <!-- Link Cepat -->
+      <div class="md:col-span-2">
+        <h4 class="font-semibold mb-3">Link Cepat</h4>
+        <ul class="text-sm space-y-2 text-gray-300 dark:text-slate-300">
+          <li><a href="/status" class="hover:text-white">Status Pesanan</a></li>
+          <li><a href="https://inovixa.web.id/services" class="hover:text-white">Promo</a></li>
+          <li><a href="https://inovixa.web.id/portfolio" class="hover:text-white">FAQ</a></li>
+        </ul>
+      </div>
+
+      <!-- Bantuan -->
+      <div class="md:col-span-2">
+        <h4 class="font-semibold mb-3">Bantuan</h4>
+        <ul class="text-sm space-y-2 text-gray-300 dark:text-slate-300">
+          <li><a href="https://inovixa.web.id/contact" class="hover:text-white">Hubungi Kami</a></li>
+          <li><a href="https://inovixa.web.id/contact" class="hover:text-white">Panduan</a></li>
+          <li><a href="https://inovixa.web.id/privacy-policy" class="hover:text-white">Refund & Kebijakan</a></li>
+        </ul>
+      </div>
+
+      <!-- Ikuti Kami + Pembayaran -->
+      <div class="md:col-span-3 lg:col-span-2">
+        <h4 class="font-semibold mb-3">Ikuti Kami</h4>
+        <div class="flex flex-wrap items-center gap-3">
+          <a aria-label="LinkedIn" href="https://linkedin.com/company/inovixa-technologies" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-linkedin"></i></a>
+          <a aria-label="Facebook" href="https://www.facebook.com/share/1BWzCJNzW4" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-facebook-f"></i></a>
+          <a aria-label="Instagram" href="https://instagram.com/inovixa" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-instagram"></i></a>
+          <a aria-label="TikTok" href="https://tiktok.com/@inovixa" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-tiktok"></i></a>
+          <a aria-label="YouTube" href="https://youtube.com/@inovixa_tech" class="p-2 rounded-md hover:bg-white/10"><i class="fab fa-youtube"></i></a>
+        </div>
+
+        <!-- Pembayaran -->
+        <div class="mt-6">
+          <h5 class="text-sm font-semibold mb-2">Metode Pembayaran</h5>
+          <div class="flex gap-2 items-center">
+            <img src="/img/payment.png" alt="Payment" class="mx-auto rounded max-w-full h-auto" />
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Copyright -->
+    <div class="border-t border-gray-700 mt-8 pt-4 text-center text-xs text-gray-400 dark:text-slate-500">
+      &copy; 2025 UniShop by PT Inovixa Technologies Solution.
+    </div>
+  </div>
+</footer>
+
+  <!-- Toast -->
+  <div id="toast" class="bg-gray-800 text-white"></div>
+
+  <!-- THEME + UI SCRIPTS (dari provider.ejs) -->
+  <script>
+    const THEME_KEY = 'unishop_theme';
+    const themeToggle = document.getElementById('theme-toggle');
+    const mobileThemeToggle = document.getElementById('mobile-theme-toggle');
+    const themeIcon = document.getElementById('theme-icon');
+    const mobileThemeIcon = document.getElementById('mobile-theme-icon');
+    const themeDot = document.getElementById('theme-dot');
+    function applyThemeClass(theme){ if (theme === 'dark') document.documentElement.classList.add('dark'); else document.documentElement.classList.remove('dark'); }
+    function getInitialTheme(){ const saved = localStorage.getItem(THEME_KEY); if (saved === 'dark' || saved === 'light') return saved; const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches; return prefersDark ? 'dark' : 'light'; }
+    function setTheme(theme, persist = true){ applyThemeClass(theme); const isDark = theme === 'dark'; if (themeToggle) { themeToggle.setAttribute('aria-checked', isDark ? 'true' : 'false'); themeIcon && (themeIcon.innerHTML = isDark ? '<i class="fa-solid fa-moon"></i>' : '<i class="fa-solid fa-sun"></i>'); if (themeDot) themeDot.style.transform = isDark ? 'translateX(22px)' : 'translateX(0)'; } if (mobileThemeIcon) mobileThemeIcon.className = isDark ? 'fa-solid fa-moon text-slate-200' : 'fa-solid fa-sun text-yellow-400'; if (persist) localStorage.setItem(THEME_KEY, theme); }
+    function toggleTheme(){ const cur = document.documentElement.classList.contains('dark') ? 'dark' : 'light'; setTheme(cur === 'dark' ? 'light' : 'dark', true); }
+    (function initTheme(){ const initial = getInitialTheme(); setTheme(initial, false); })();
+    if (themeToggle) themeToggle.addEventListener('click', toggleTheme);
+    if (themeToggle) themeToggle.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Spacebar' || e.key === 'Enter') { e.preventDefault(); toggleTheme(); } });
+    if (mobileThemeToggle) mobileThemeToggle.addEventListener('click', toggleTheme);
+
+    const menuToggle = document.getElementById('menu-toggle');
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (menuToggle && mobileMenu) menuToggle.addEventListener('click', ()=> mobileMenu.classList.toggle('hidden'));
+    const ye = document.getElementById('currentYear'); if (ye) ye.textContent = new Date().getFullYear();
+  </script>
+
+  <!-- PAYMENT SCRIPT (REVISI LENGKAP) -->
+  <script>
+  // Data dari server (diberikan oleh res.render)
+  const orderData = <%- JSON.stringify(order || {}) %>;
+  const transactionId = '<%= trx_id || "" %>';
+
+  // DOM elements
+  const titleEl = document.getElementById('title-product');
+  const subtitleMinutesEl = document.getElementById('subtitle-minutes');
+  const subtitleSecondsEl = document.getElementById('subtitle-seconds');
+  const paymentArea = document.getElementById('payment-area');
+  const detailReff = document.getElementById('detail-reff');
+  const btnCopyTrx = document.getElementById('btn-copy-trx');
+  const detailProduct = document.getElementById('detail-product');
+  const detailPrice = document.getElementById('detail-price');
+  const detailTarget = document.getElementById('detail-target');
+  const detailMethod = document.getElementById('detail-method');
+  const detailStatus = document.getElementById('detail-status');
+  const detailCountdown = document.getElementById('detail-countdown');
+  const btnCheck = document.getElementById('btn-check'); // tombol "Saya sudah bayar"
+  const btnCancel = document.getElementById('btn-cancel');
+  const btnDownloadQr = document.getElementById('btn-download-qr');
+  const btnCopyLink = document.getElementById('btn-copy-link');
+  const btnCopyVa = document.getElementById('btn-copy-va');
+  const btnOpenPayment = document.getElementById('btn-open-payment');
+  const msg = document.getElementById('msg');
+  const toast = document.getElementById('toast');
+  const methodBadgeWrapper = document.getElementById('method-badge-wrapper');
+  const methodIcon = document.getElementById('method-icon');
+  const paymentHint = document.getElementById('payment-hint');
+
+  // State
+  let order = orderData || {};
+  let expiryTimer = null;
+  let statusChecker = null;
+
+  // TRANSAKSI state
+  let transaksiCreated = false;
+  let transaksiId = null;
+  let transaksiStatusChecker = null;
+
+  // QR caching: don't reload same QR on every poll
+  // currentQrKey = `${type}:${value}` where type is 'image' or 'string' (server-provided raw)
+  let currentQrKey = null;
+  let qrImgEl = null;        // <img> element used to render QR
+  let qrContainerEl = null;  // wrapping container (so we can keep the DOM node and avoid flicker)
+
+  // utility: safe string
+  const s = (v)=> typeof v === 'undefined' || v === null ? '' : String(v);
+
+  // Detect payment method robustly
+  function detectMethod(o){
+    const methodRaw = (o.metode || o.method || o.payment_method || o.tipe || o.type || '').toString().toLowerCase();
+    const pm = s(o.metode || o.method || o.payment_method || o.tipe || o.type).toUpperCase();
+    const hasQrImage = !!(o.qr_image || o.qr_string);
+    const hasUrl = !!o.url;
+    const hasVa = !!(o.nomor_va || o.va || o.account_number || o.destination_number);
+    const bankName = s(o.bank || o.bank_name || '').toLowerCase();
+
+    if (methodRaw.includes('qris') || methodRaw.includes('qr') || pm.includes('QR')) return 'QRIS';
+    if (hasQrImage && !methodRaw) return 'QRIS';
+    if (methodRaw.includes('ewallet') || methodRaw.includes('ovo') || methodRaw.includes('dana') || methodRaw.includes('gopay')) return 'QRIS';
+    if (hasUrl && (methodRaw.includes('link') || pm.includes('LINK') || pm.includes('PAYMENT') )) return 'LINK';
+    if (methodRaw.includes('bank') || methodRaw.includes('va') || pm.includes('VA') || pm.includes('VIRTUAL') || hasVa || bankName) {
+      if (pm.includes('VA') || methodRaw.includes('va') || hasVa) return 'VA';
+      return 'BANK';
+    }
+    if (hasUrl) return 'LINK';
+    return 'UNKNOWN';
+  }
+
+  // Format currency
+  const currencyFmt = (n) => new Intl.NumberFormat('id-ID', {style: 'currency', currency: 'IDR', minimumFractionDigits: 0}).format(Number(n || 0));
+
+  // Small helpers for show/hide
+  function showEl(el) { if (!el) return; el.classList.remove('hidden'); el.disabled = false; }
+  function hideEl(el) { if (!el) return; el.classList.add('hidden'); el.disabled = true; }
+
+  // Toast helper
+  let toastTimer = null;
+  function showToast(text, timeout = 2000) {
+    if (!toast) return;
+    toast.textContent = text;
+    toast.style.display = 'block';
+    if (toastTimer) clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => { toast.style.display = 'none'; }, timeout);
+  }
+
+  // Stop countdown and set display to '-'
+  function stopCountdown() {
+    if (expiryTimer) {
+      clearInterval(expiryTimer);
+      expiryTimer = null;
+    }
+    if (detailCountdown) detailCountdown.textContent = '-';
+    if (subtitleMinutesEl) subtitleMinutesEl.textContent = '-';
+    if (subtitleSecondsEl) subtitleSecondsEl.textContent = '';
+  }
+
+  // Cleanup QR caches & DOM
+  function clearQrCacheAndDom() {
+    if (qrImgEl && qrImgEl.parentNode) {
+      try { qrImgEl.parentNode.removeChild(qrImgEl); } catch(e){}
+    }
+    if (qrContainerEl && qrContainerEl.parentNode) {
+      try { qrContainerEl.parentNode.removeChild(qrContainerEl); } catch(e){}
+    }
+    qrImgEl = null;
+    qrContainerEl = null;
+    currentQrKey = null;
+  }
+
+  // Simple download using <a download>.
+  function performSimpleDownload(url, filename) {
+    if (!url) { showToast('URL tidak tersedia'); return; }
+    try {
+      const a = document.createElement('a');
+      a.href = url;
+      if (filename) a.setAttribute('download', filename);
+      else a.setAttribute('download', '');
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      showToast('Mulai mengunduh...');
+      const isDataUrl = url.startsWith('data:') || url.startsWith('blob:');
+      if (!isDataUrl && url.startsWith('http')) {
+        setTimeout(() => { window.open(url, '_blank', 'noopener'); }, 350);
+      }
+    } catch (err) {
+      console.error('performSimpleDownload error:', err);
+      window.open(url, '_blank', 'noopener');
+      showToast('Membuka tautan di tab baru untuk pengunduhan');
+    }
+  }
+
+  // Update UI details
+  function updateOrderDetails() {
+    // show transaksiId (jika sudah ada) dulu; kalau belum fallback ke deposit transactionId atau order.reff/order.id
+    detailReff && (detailReff.textContent = (transaksiId || transactionId || (order.reff || order.id) || '-'));
+    detailProduct && (detailProduct.textContent = (order.product && (order.product.name || order.product.title)) || order.product || '-');
+    detailPrice && (detailPrice.textContent = order.nominal ? currencyFmt(order.nominal) : (order.amount ? currencyFmt(order.amount) : 'Rp 0'));
+    detailTarget && (detailTarget.textContent = order.target || order.tujuan || (order.product && (order.product.target || '-')) || '-');
+    detailMethod && (detailMethod.textContent = (order.metode || order.method || order.payment_method || detectMethod(order)) || '-');
+    detailStatus && (detailStatus.textContent = (order.status || 'pending'));
+    updateStatusColor(order.status);
+    const method = detectMethod(order);
+    renderMethodBadge(method);
+  }
+
+  function updateStatusColor(status) {
+    const statusEl = detailStatus;
+    if (!statusEl) return;
+    statusEl.className = '';
+    switch(String(status || '').toLowerCase()) {
+      case 'pending':
+      case 'unpaid':
+        statusEl.classList.add('text-yellow-600');
+        break;
+      case 'success':
+      case 'paid':
+      case 'completed':
+        statusEl.classList.add('text-green-600');
+        break;
+      case 'cancel':
+      case 'cancelled':
+      case 'failed':
+      case 'expired':
+        statusEl.classList.add('text-red-600');
+        break;
+      default:
+        statusEl.classList.add('text-gray-600');
+    }
+  }
+
+  // Render method badge + icon
+  function renderMethodBadge(method) {
+    if (!methodBadgeWrapper) return;
+    methodBadgeWrapper.innerHTML = '';
+    methodIcon && (methodIcon.innerHTML = '');
+    const m = (method || detectMethod(order)).toUpperCase();
+    const badge = document.createElement('div');
+    badge.className = 'method-badge bg-gray-100 dark:bg-slate-800 text-gray-700 dark:text-slate-200';
+    let icon = 'fa-credit-card';
+    let label = m;
+    if (m === 'QRIS') { icon = 'fa-qrcode'; label = 'QRIS / E-Wallet'; badge.className = 'method-badge bg-gradient-to-tr from-rose-50 to-indigo-50 text-rose-700 dark:bg-gradient-to-tr dark:from-slate-800 dark:to-slate-900 dark:text-rose-300'; }
+    if (m === 'LINK') { icon = 'fa-link'; label = 'Payment Link'; badge.className = 'method-badge bg-gradient-to-tr from-emerald-50 to-emerald-100 text-emerald-700 dark:bg-slate-800 dark:text-emerald-300'; }
+    if (m === 'VA') { icon = 'fa-file-invoice-dollar'; label = 'Virtual Account'; badge.className = 'method-badge bg-gradient-to-tr from-yellow-50 to-orange-50 text-orange-700 dark:bg-slate-800 dark:text-orange-300'; }
+    if (m === 'BANK') { icon = 'fa-university'; label = 'Transfer Bank'; badge.className = 'method-badge bg-gradient-to-tr from-blue-50 to-indigo-50 text-blue-700 dark:bg-slate-800 dark:text-blue-300'; }
+    badge.innerHTML = `<i class="fa-solid ${icon}"></i><span class="ml-2">${label}</span>`;
+    methodBadgeWrapper.appendChild(badge);
+
+    if (methodIcon) {
+      methodIcon.classList.remove('hidden');
+      methodIcon.innerHTML = `<div class="w-10 h-10 rounded-full bg-gray-100 dark:bg-slate-800 flex items-center justify-center"><i class="fa-solid ${icon} text-lg"></i></div>`;
+    }
+  }
+
+  // Helper: build server-provided QR raw key and preferred src/url
+  // returns { key: string|null, type: 'image'|'string'|null, src: string|null, isBase64: bool }
+  function buildQrInfo(o) {
+    if (!o) return { key: null, type: null, src: null, isBase64: false };
+    if (o.qr_image) {
+      return { key: 'image:'+String(o.qr_image), type: 'image', src: String(o.qr_image), isBase64: false };
+    }
+    if (o.qr_string) {
+      const sVal = String(o.qr_string);
+      const isLikelyBase64 = /^[A-Za-z0-9+/=\s-]+$/.test(sVal) && (sVal.length % 4 === 0 || sVal.indexOf(' ') === -1);
+      return { key: 'string:'+sVal, type: 'string', src: sVal, isBase64: isLikelyBase64 };
+    }
+    return { key: null, type: null, src: null, isBase64: false };
+  }
+
+  // Render payment visual (pending)
+  function renderPaymentVisual() {
+    if (!paymentArea) return;
+    const curStatus = (order.status || '').toString().toLowerCase();
+    if (curStatus && curStatus !== 'pending' && curStatus !== 'unpaid') {
+      clearQrCacheAndDom();
+
+      const sStatus = curStatus;
+      let icon = 'fa-info-circle';
+      let title = 'Status';
+      let subtitle = `Status deposit: ${String(sStatus).toUpperCase()}`;
+
+      // Ambil Deposit ID dengan fallback yang robust
+      const depositId = orderData.deposit_id || orderData.id || '-';
+
+      if (sStatus === 'success' || sStatus === 'paid' || sStatus === 'completed') {
+        icon = 'fa-circle-check';
+        title = 'Pembayaran diterima';
+      }
+      if (sStatus === 'cancel' || sStatus === 'cancelled') {
+        icon = 'fa-ban';
+        title = 'Pembayaran dibatalkan';
+      }
+      if (sStatus === 'expired') {
+        icon = 'fa-hourglass-end';
+        title = 'Pembayaran kadaluwarsa';
+      }
+
+      // Hanya tampilkan Deposit ID ketika status SUCCESS/PAID/COMPLETED
+      const depositLine = (sStatus === 'success' || sStatus === 'paid' || sStatus === 'completed')
+        ? `<div class="text-xs text-gray-500 dark:text-slate-300 mt-2">Deposit ID: <strong>${depositId}</strong></div>`
+        : '';
+
+      paymentArea.innerHTML = `<div class="text-center">
+        <div class="text-2xl font-semibold mb-2"><i class="fa-solid ${icon} mr-2"></i>${title}</div>
+        <div class="text-sm text-gray-500 dark:text-slate-300">${subtitle}</div>
+        ${depositLine}
+      </div>`;
+
+      hideEl(btnDownloadQr); hideEl(btnCopyLink); hideEl(btnCopyVa); hideEl(btnOpenPayment);
+      return;
+    }
+
+    const method = detectMethod(order);
+    const amount = order.nominal || order.amount || 0;
+
+    // QRIS: sticky DOM, no reload unless server-sent key berubah
+    if (method === 'QRIS') {
+      const qi = buildQrInfo(order);
+      if (!qi.key) {
+        if (currentQrKey) clearQrCacheAndDom();
+        paymentArea.innerHTML = `<div class="text-sm text-red-500">QR tidak tersedia</div>
+          <div class="text-sm text-gray-500 dark:text-slate-300">Bayar sebesar <strong>${currencyFmt(amount)}</strong></div>`;
+        hideEl(btnDownloadQr);
+        // For QRIS we intentionally hide link & open-payment
+        hideEl(btnCopyLink);
+        hideEl(btnOpenPayment);
+        paymentHint.textContent = 'QR tidak tersedia.';
+        return;
+      }
+
+      // same key => keep DOM stable and DO NOT show link (hide)
+      if (currentQrKey === qi.key && qrImgEl && qrContainerEl && paymentArea.contains(qrContainerEl)) {
+        showEl(btnDownloadQr);
+        btnDownloadQr.onclick = () => performSimpleDownload(qrImgEl.src, `qris_${transactionId}.png`);
+        // QRIS: no link next to download
+        hideEl(btnCopyLink);
+        hideEl(btnOpenPayment);
+        hideEl(btnCopyVa);
+        paymentHint.textContent = 'Scan QR menggunakan aplikasi dompet digital atau buka halaman pembayaran.';
+        return;
+      }
+
+      // else: key changed -> update DOM minimally (reuse container to avoid flicker)
+      if (!qrContainerEl) {
+        paymentArea.innerHTML = '';
+        qrContainerEl = document.createElement('div');
+        qrContainerEl.className = 'flex flex-col items-center gap-3';
+        paymentArea.appendChild(qrContainerEl);
+      } else {
+        qrContainerEl.innerHTML = '';
+      }
+
+      if (!qrImgEl || !qrContainerEl.contains(qrImgEl)) {
+        qrImgEl = document.createElement('img');
+        qrImgEl.id = 'payment-qr-img';
+        qrImgEl.className = 'mx-auto max-w-full h-auto rounded-lg shadow-sm';
+        qrImgEl.draggable = false;
+      }
+
+      function setImgSrcWithFallback(primarySrc, fallbackFn) {
+        let didFallback = false;
+        const onErr = function () {
+          qrImgEl.removeEventListener('error', onErr);
+          if (didFallback) return;
+          didFallback = true;
+          fallbackFn().catch(err => {
+            console.error('QR fallback failed:', err);
+            qrImgEl.style.display = 'none';
+            const errEl = document.createElement('div');
+            errEl.className = 'text-sm text-red-500';
+            errEl.textContent = 'Gagal memuat QR';
+            qrContainerEl.appendChild(errEl);
+            hideEl(btnDownloadQr);
+          });
+        };
+        qrImgEl.addEventListener('error', onErr);
+        qrImgEl.src = primarySrc;
+      }
+
+      if (qi.type === 'image') {
+        setImgSrcWithFallback(qi.src, async () => {
+          if (order.qr_string) {
+            const str = String(order.qr_string);
+            const isBase64 = /^[A-Za-z0-9+/=\s-]+$/.test(str) && (str.length % 4 === 0 || str.indexOf(' ') === -1);
+            if (isBase64) {
+              qrImgEl.src = 'data:image/png;base64,' + str;
+              currentQrKey = 'string:' + str;
+              return;
+            } else {
+              const encoded = encodeURIComponent(str);
+              const apiUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encoded;
+              qrImgEl.src = apiUrl;
+              currentQrKey = 'string:' + str;
+              return;
+            }
+          } else {
+            throw new Error('no qr_string fallback available');
+          }
+        });
+        if (!qrContainerEl.contains(qrImgEl)) qrContainerEl.appendChild(qrImgEl);
+        currentQrKey = qi.key;
+        showEl(btnDownloadQr);
+        btnDownloadQr.onclick = () => performSimpleDownload(qrImgEl.src, `qris_${transactionId}.png`);
+      } else if (qi.type === 'string') {
+        const str = qi.src;
+        if (qi.isBase64) {
+          qrImgEl.src = 'data:image/png;base64,' + str;
+        } else {
+          const encoded = encodeURIComponent(str);
+          qrImgEl.src = 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=' + encoded;
+        }
+        if (!qrContainerEl.contains(qrImgEl)) qrContainerEl.appendChild(qrImgEl);
+        currentQrKey = qi.key;
+        showEl(btnDownloadQr);
+        btnDownloadQr.onclick = () => performSimpleDownload(qrImgEl.src, `qris_${transactionId}.png`);
+      }
+
+      // amount & buttons (QRIS intentionally hides copy link)
+      const amountEl = document.createElement('div');
+      amountEl.className = 'text-sm text-gray-500 dark:text-slate-300';
+      amountEl.innerHTML = `Bayar sebesar <strong>${currencyFmt(amount)}</strong>`;
+      qrContainerEl.appendChild(amountEl);
+
+      hideEl(btnCopyLink);  // <-- HIDE link for QRIS
+      hideEl(btnOpenPayment);
+      hideEl(btnCopyVa);
+      paymentHint.textContent = 'Scan QR menggunakan aplikasi dompet digital atau buka halaman pembayaran.';
+      return;
+    }
+
+    // LINK
+    if (method === 'LINK') {
+      if (currentQrKey) clearQrCacheAndDom();
+      paymentArea.innerHTML = `<div class="flex flex-col items-center gap-3">
+        <div class="text-sm">Gunakan tautan pembayaran di bawah untuk menyelesaikan pembayaran.</div>
+        <div class="text-lg font-semibold">${currencyFmt(amount)}</div>
+      </div>`;
+      showEl(btnCopyLink);
+      btnCopyLink.onclick = () => { if (order.url) copyToClipboard(order.url, 'Link pembayaran disalin'); else showToast('Link tidak tersedia'); };
+      if (order.url) { showEl(btnOpenPayment); btnOpenPayment.href = order.url; } else hideEl(btnOpenPayment);
+      hideEl(btnDownloadQr); hideEl(btnCopyVa);
+      paymentHint.textContent = 'Link hanya untuk melihat halaman pembayaran yang dihasilkan provider.';
+      return;
+    }
+
+    // VA/BANK
+    if (method === 'VA' || method === 'BANK') {
+      if (currentQrKey) clearQrCacheAndDom();
+      const va = order.nomor_va || order.va || order.account_number || order.destination_number || '';
+      const bankName = order.bank || order.bank_name || order.provider || '';
+      paymentArea.innerHTML = `<div class="flex flex-col items-center gap-2">
+        <div class="text-xs text-gray-500">Transfer ke</div>
+        <div class="text-2xl font-mono font-bold" id="bank-value">${va || '-'}</div>
+        <div class="text-sm text-gray-500">${bankName || 'Bank yang ditentukan'}</div>
+      </div>`;
+      if (va) {
+        showEl(btnCopyVa);
+        btnCopyVa.onclick = () => copyToClipboard(va, 'Nomor VA/Rek disalin');
+      } else hideEl(btnCopyVa);
+      hideEl(btnDownloadQr);
+      hideEl(btnCopyLink);
+      if (order.payment_info && order.payment_info.qr) {
+        const q = order.payment_info.qr;
+        if (q && (!currentQrKey || currentQrKey !== ('payment_info_qr:' + q))) {
+          const img = document.createElement('img'); img.src = q; img.className = 'max-w-xs mt-3'; img.alt='QR tambahan';
+          paymentArea.appendChild(img);
+          currentQrKey = 'payment_info_qr:' + q;
+        }
+      }
+      paymentHint.textContent = 'Gunakan nominal & VA di atas persis saat transfer agar otomatis terverifikasi.';
+      return;
+    }
+
+    // UNKNOWN
+    if (currentQrKey) clearQrCacheAndDom();
+    paymentArea.innerHTML = `<div class="text-sm text-red-500">Metode pembayaran belum tersedia / tidak dikenali.</div>`;
+    hideEl(btnDownloadQr); hideEl(btnCopyLink); hideEl(btnCopyVa); hideEl(btnOpenPayment);
+    paymentHint.textContent = '';
+  }
+
+  // Parse expiry value defensively
+  function parseExpiry(value) {
+    if (!value) return null;
+    if (value instanceof Date) return value;
+    if (typeof value === 'number') {
+      if (String(value).length === 10) return new Date(value * 1000);
+      return new Date(value);
+    }
+    const asNum = Number(value);
+    if (!isNaN(asNum)) {
+      return parseExpiry(asNum);
+    }
+    const d = new Date(value);
+    if (!isNaN(d)) return d;
+    return null;
+  }
+
+  function formatRemaining(diffMs) {
+    if (diffMs <= 0) return { compact: '0 menit', clock: '00:00', seconds: 0 };
+    const secTotal = Math.floor(diffMs / 1000);
+    const days = Math.floor(secTotal / 86400);
+    const hours = Math.floor((secTotal % 86400) / 3600);
+    const minutes = Math.floor((secTotal % 3600) / 60);
+    const seconds = secTotal % 60;
+
+    let clock = '';
+    if (days > 0) {
+      clock = `${days}d ${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+    } else if (hours > 0) {
+      clock = `${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+    } else {
+      clock = `${String(minutes).padStart(2,'0')}:${String(seconds).padStart(2,'0')}`;
+    }
+
+    let compact = '';
+    if (days > 0) compact = `${days} hari${hours ? ' ' + hours + ' jam' : ''}`;
+    else if (hours > 0) compact = `${hours} jam${minutes ? ' ' + minutes + ' menit' : ''}`;
+    else if (minutes > 0) compact = `${minutes} menit${seconds ? ' ' + seconds + 's' : ''}`;
+    else compact = `${seconds}s`;
+
+    return { compact, clock, seconds };
+  }
+
+  // Start countdown (uses order.expired_at)
+  function startCountdown() {
+    if (expiryTimer) { clearInterval(expiryTimer); expiryTimer = null; }
+
+    if (!order.expired_at) {
+      if (detailCountdown) detailCountdown.textContent = '-';
+      if (subtitleMinutesEl) subtitleMinutesEl.textContent = '-';
+      if (subtitleSecondsEl) subtitleSecondsEl.textContent = '';
+      return;
+    }
+
+    const expiryDate = parseExpiry(order.expired_at);
+    if (!expiryDate) {
+      if (detailCountdown) detailCountdown.textContent = '-';
+      if (subtitleMinutesEl) subtitleMinutesEl.textContent = '-';
+      if (subtitleSecondsEl) subtitleSecondsEl.textContent = '';
+      return;
+    }
+
+    const st = String(order.status || '').toLowerCase();
+    if (st && st !== 'pending' && st !== 'unpaid') {
+      if (detailCountdown) detailCountdown.textContent = '-';
+      if (subtitleMinutesEl) subtitleMinutesEl.textContent = '-';
+      if (subtitleSecondsEl) subtitleSecondsEl.textContent = '';
+      return;
+    }
+
+    function updateAll() {
+      const now = new Date();
+      const diff = expiryDate - now;
+      if (diff <= 0) {
+        if (detailCountdown) detailCountdown.textContent = '00:00';
+        if (subtitleMinutesEl) subtitleMinutesEl.textContent = '0 menit';
+        if (subtitleSecondsEl) subtitleSecondsEl.textContent = '';
+        checkStatus(); // final check
+        if (expiryTimer) { clearInterval(expiryTimer); expiryTimer = null; }
+        return;
+      }
+      const formatted = formatRemaining(diff);
+      if (detailCountdown) detailCountdown.textContent = formatted.clock;
+      if (subtitleMinutesEl) subtitleMinutesEl.textContent = formatted.compact;
+      if (subtitleSecondsEl) subtitleSecondsEl.textContent = (typeof formatted.seconds !== 'undefined') ? `${String(formatted.seconds).padStart(2,'0')}s` : '';
+    }
+
+    updateAll();
+    expiryTimer = setInterval(() => {
+      const curStatus = String(order.status || '').toLowerCase();
+      if (curStatus && curStatus !== 'pending' && curStatus !== 'unpaid') {
+        stopCountdown();
+        return;
+      }
+      const now = new Date();
+      const diff = expiryDate - now;
+      if (diff <= 0) {
+        if (detailCountdown) detailCountdown.textContent = '00:00';
+        if (subtitleMinutesEl) subtitleMinutesEl.textContent = '0 menit';
+        if (subtitleSecondsEl) subtitleSecondsEl.textContent = '';
+        checkStatus();
+        clearInterval(expiryTimer);
+        expiryTimer = null;
+        return;
+      }
+      const formatted = formatRemaining(diff);
+      if (detailCountdown) detailCountdown.textContent = formatted.clock;
+      if (subtitleMinutesEl) subtitleMinutesEl.textContent = formatted.compact;
+      if (subtitleSecondsEl) subtitleSecondsEl.textContent = (typeof formatted.seconds !== 'undefined') ? `${String(formatted.seconds).padStart(2,'0')}s` : '';
+    }, 1000);
+  }
+
+  // Start deposit status checking (safe: clears previous interval)
+  function startStatusChecking() {
+    if (statusChecker) {
+      clearInterval(statusChecker);
+      statusChecker = null;
+    }
+    checkStatus();
+    statusChecker = setInterval(checkStatus, 5000);
+  }
+
+  // Check deposit status (POST /api/deposit-status { id })
+  async function checkStatus() {
+    try {
+      const response = await fetch('/api/deposit-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: transactionId })
+      });
+
+      if (!response.ok) {
+        console.warn('deposit-status non-200', response.status);
+        return;
+      }
+
+      const result = await response.json();
+      if (!result) return;
+
+      const respData = result.data && (result.data.data || result.data) ? (result.data.data || result.data) : (result.data || result);
+      if (!respData) return;
+
+      // Normalize status field
+      const newStatus = respData.status || respData.state || respData.payment_status || respData.paymentStatus || respData.result;
+      // merge useful fields
+      if (typeof respData.nomor_va !== 'undefined') order.nomor_va = respData.nomor_va;
+      if (typeof respData.tujuan !== 'undefined') order.tujuan = respData.tujuan;
+      if (typeof respData.url !== 'undefined') order.url = respData.url;
+      if (typeof respData.qr_string !== 'undefined') order.qr_string = respData.qr_string;
+      if (typeof respData.qr_image !== 'undefined') order.qr_image = respData.qr_image;
+      if (typeof respData.expired_at !== 'undefined') order.expired_at = respData.expired_at;
+      if (typeof respData.nominal !== 'undefined') order.nominal = respData.nominal;
+
+      const prevStatus = (order.status || '').toString().toLowerCase();
+      if (newStatus && newStatus.toString().toLowerCase() !== prevStatus) {
+        order.status = newStatus;
+      }
+
+      // update UI; renderPaymentVisual will decide whether to touch QR DOM
+      updateOrderDetails();
+      renderPaymentVisual();
+      startCountdown();
+
+      const stLower = (order.status || '').toString().toLowerCase();
+      // If deposit is success/paid -> create transaksi once
+      if ((stLower === 'success' || stLower === 'paid' || stLower === 'completed') && !transaksiCreated) {
+        createTransaksiOnce();
+      }
+
+      if (stLower && stLower !== 'pending' && stLower !== 'unpaid') {
+        if (statusChecker) { clearInterval(statusChecker); statusChecker = null; }
+        hideEl(btnCancel); hideEl(btnCheck);
+        clearQrCacheAndDom();
+        renderPaymentVisual();
+        stopCountdown();
+      }
+    } catch (error) {
+      console.error('Error checking deposit status:', error);
+    }
+  }
+
+  // Create transaksi once (idempotent on client + server should ensure idempotency)
+  async function createTransaksiOnce() {
+    if (transaksiCreated) return;
+    transaksiCreated = true;
+
+    const lsKey = 'transaksi_created_' + transactionId;
+    try {
+      const saved = localStorage.getItem(lsKey);
+      if (saved) {
+        const p = JSON.parse(saved);
+        if (p && p.created) {
+          transaksiCreated = true;
+          transaksiId = p.id || p.trx_id || null;
+          if (transaksiId) {
+            // Update UI immediately to show transaksiId
+            // also update order reff/id to keep consistency if needed
+            order.reff = transaksiId;
+            order.id = transaksiId;
+            updateOrderDetails();
+            ensureTransaksiStatusBlock();
+            setTransaksiStatus('created', 'Transaksi sudah tercatat (lokal). Memeriksa status...');
+            startTransaksiPolling();
+            return;
+          }
+        }
+      }
+    } catch (e) { /* ignore parse */ }
+
+    // Build payload (best-effort)
+    const reff = order.reff_id || order.reff || order.id || '';
+    const code = (order.product && (order.product.code || order.product.kode)) || order.code || '';
+    const target = order.target || order.tujuan || (order.product && (order.product.target || '')) || '';
+
+    const payload = { reff_id: reff || '', code: code || '', target: target || '', transaction_id: transactionId };
+
+    try {
+      const resp = await fetch('/api/transaction-create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const j = await resp.json();
+
+      // success shapes vary — try best effort to extract id
+      if (j && (j.ok || j.success || resp.status === 200)) {
+        const d = j.data || j;
+        transaksiId = (d && (d.id || d.trx_id || d.transaction_id || d.order_id || d.ref || d.reff_id)) || reff || transactionId;
+        try { localStorage.setItem(lsKey, JSON.stringify({ created: true, id: transaksiId })); } catch(e){}
+        // update order/display to use transaksiId
+        order.reff = transaksiId;
+        order.id = transaksiId;
+        updateOrderDetails(); // will set detailReff to transaksiId
+        ensureTransaksiStatusBlock();
+        setTransaksiStatus('created', 'Transaksi dibuat, memeriksa status...');
+        startTransaksiPolling();
+        showTransientMessage('Transaksi dibuat, memeriksa status transaksi...', false);
+        hideEl(btnCancel); hideEl(btnCheck);
+        clearQrCacheAndDom();
+        stopCountdown();
+        return;
+      }
+
+      // if server says already exists
+      const msgLower = (j && (j.message || '') + '').toLowerCase();
+      const codeResp = j && j.code ? j.code : null;
+      if (codeResp === 409 || msgLower.indexOf('already') !== -1 || msgLower.indexOf('exists') !== -1 || msgLower.indexOf('sudah') !== -1) {
+        let existingId = null;
+        if (j && j.data) existingId = j.data.id || j.data.trx_id || j.data.transaction_id || j.data.order_id || j.data.reff_id;
+        transaksiId = existingId || reff || transactionId;
+        try { localStorage.setItem(lsKey, JSON.stringify({ created: true, id: transaksiId })); } catch(e){}
+        // update display to transaksiId
+        order.reff = transaksiId;
+        order.id = transaksiId;
+        updateOrderDetails();
+        ensureTransaksiStatusBlock();
+        setTransaksiStatus('created', 'Transaksi sudah ada. Memeriksa status...');
+        startTransaksiPolling();
+        showTransientMessage('Transaksi sudah tercatat sebelumnya. Memeriksa status...', false);
+        return;
+      }
+
+      console.error('transaction-create unexpected response:', j);
+      showTransientMessage('Gagal membuat transaksi. Silakan hubungi customer support.', true);
+      transaksiCreated = false;
+    } catch (err) {
+      console.error('createTransaksiOnce error:', err);
+      showTransientMessage('Gagal membuat transaksi (network).', true);
+      transaksiCreated = false;
+    }
+  }
+
+  // Transaksi status UI helpers
+  function ensureTransaksiStatusBlock() {
+    let el = document.getElementById('detail-transaction-status');
+    if (el) return el;
+    el = document.createElement('div');
+    el.id = 'detail-transaction-status';
+    el.className = 'mt-4 p-3 border rounded-sm bg-gray-50 dark:bg-slate-800 text-sm';
+    el.innerHTML = `<div><strong>Status Transaksi:</strong> <span id="ts-status">-</span></div>
+                    <div id="ts-info" class="text-xs text-gray-600 dark:text-slate-300 mt-1"></div>`;
+    const aside = document.querySelector('aside.card');
+    if (aside) aside.appendChild(el);
+    else document.body.appendChild(el);
+    return el;
+  }
+
+  function setTransaksiStatus(code, info) {
+    const el = document.getElementById('detail-transaction-status') || ensureTransaksiStatusBlock();
+    const statusEl = document.getElementById('ts-status');
+    const infoEl = document.getElementById('ts-info');
+    if (statusEl) statusEl.textContent = String(code || '-').toUpperCase();
+    if (infoEl) infoEl.textContent = info || '';
+  }
+
+  function startTransaksiPolling() {
+    if (!transaksiId) {
+      console.warn('Tidak ada transaksiId, batal polling transaksi');
+      return;
+    }
+    if (transaksiStatusChecker) { clearInterval(transaksiStatusChecker); transaksiStatusChecker = null; }
+    checkTransaksiStatus();
+    transaksiStatusChecker = setInterval(checkTransaksiStatus, 5000);
+  }
+
+  async function checkTransaksiStatus() {
+    if (!transaksiId) return;
+    try {
+      const resp = await fetch('/api/transaction-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: transaksiId })
+      });
+      if (!resp.ok) {
+        console.warn('transaction-status non-200', resp.status);
+      }
+      const j = await resp.json();
+      let payload = null;
+      if (j && j.data) payload = j.data.data || j.data;
+      else payload = j;
+
+      const tStatus = payload && (payload.status || payload.state || payload.result || payload.transaction_status || payload.tx_status) ? (payload.status || payload.state || payload.result || payload.transaction_status || payload.tx_status) : null;
+
+      setTransaksiStatus(tStatus || 'unknown', (payload && (payload.message || payload.info || payload.detail || JSON.stringify(payload))) || '');
+
+      if (tStatus) {
+        const s = String(tStatus).toLowerCase();
+        if (['success', 'done', 'paid', 'completed'].includes(s)) {
+          clearInterval(transaksiStatusChecker); transaksiStatusChecker = null;
+          setTransaksiStatus('success', 'Transaksi berhasil.');
+          showTransientMessage('Transaksi berhasil.', false);
+        } else if (['failed', 'error', 'expired', 'cancel', 'cancelled'].includes(s)) {
+          clearInterval(transaksiStatusChecker); transaksiStatusChecker = null;
+          setTransaksiStatus(s, 'Transaksi berakhir: ' + s);
+          showTransientMessage('Transaksi berakhir: ' + s, true);
+        } else {
+          setTransaksiStatus(s, 'Sedang diproses...');
+        }
+      } else {
+        setTransaksiStatus('pending', 'Menunggu pembaruan...');
+      }
+    } catch (err) {
+      console.error('checkTransaksiStatus error:', err);
+      setTransaksiStatus('error', 'Gagal memeriksa status transaksi');
+    }
+  }
+
+  // Utility: transient message inline (small)
+  function showTransientMessage(text, isError) {
+    if (!msg) return;
+    msg.textContent = text;
+    msg.className = isError ? 'text-red-500' : 'text-green-600';
+    setTimeout(() => { if (msg) msg.textContent = ''; }, 8000);
+  }
+
+  // Utilities: copy
+  function copyToClipboard(text, toastText) {
+    if (!text) {
+      showToast('Tidak ada yang disalin');
+      return;
+    }
+    navigator.clipboard.writeText(text).then(() => {
+      showToast(toastText || 'Tersalin ke clipboard!');
+    }).catch(err => {
+      console.error('Failed to copy:', err);
+      alert('Gagal menyalin ke clipboard');
+    });
+  }
+
+  function showError(message) {
+    if (msg) { msg.textContent = message; msg.classList.add('text-red-500'); }
+    else alert(message);
+  }
+
+  // Event listeners
+  if (btnCheck) {
+    btnCheck.addEventListener('click', () => {
+      if (!statusChecker) startStatusChecking();
+      else checkStatus();
+      showTransientMessage('Memeriksa status pembayaran...', false);
+    });
+  }
+
+  if (btnCancel) {
+    btnCancel.addEventListener('click', async () => {
+      if (!confirm('Yakin ingin membatalkan pembayaran?')) return;
+      try {
+        const response = await fetch('/api/deposit-cancel', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: transactionId })
+        });
+        const result = await response.json();
+        if (result && (result.ok || result.success)) {
+          showToast('Pembayaran dibatalkan');
+          order.status = 'cancelled';
+          updateOrderDetails();
+          if (statusChecker) { clearInterval(statusChecker); statusChecker = null; }
+          if (transaksiStatusChecker) { clearInterval(transaksiStatusChecker); transaksiStatusChecker = null; }
+          hideEl(btnCancel); hideEl(btnCheck);
+          clearQrCacheAndDom();
+          renderPaymentVisual();
+          stopCountdown();
+        } else {
+          alert('Gagal membatalkan: ' + (result && (result.message || result.error) || 'Unknown error'));
+        }
+      } catch (error) {
+        console.error('Error cancelling payment:', error);
+        alert('Gagal membatalkan pembayaran');
+      }
+    });
+  }
+
+  // copy trx: use transaksiId (if exists) else fallback to original deposit transactionId
+  if (btnCopyTrx) btnCopyTrx.addEventListener('click', () => copyToClipboard(transaksiId || transactionId, 'Transaction ID disalin'));
+  if (btnCopyLink) btnCopyLink.addEventListener('click', () => { if (order.url) copyToClipboard(order.url, 'Link pembayaran disalin ke clipboard'); else showToast('Link tidak tersedia'); });
+  if (btnCopyVa) btnCopyVa.addEventListener('click', () => {
+    const val = order.nomor_va || order.va || order.account_number || order.destination_number;
+    if (val) copyToClipboard(val, 'Nomor VA/Rek disalin');
+    else showToast('Nomor VA/Rek tidak tersedia');
+  });
+
+  // Kickoff initializer
+  function initPayment() {
+    if (!order || !transactionId) {
+      showError('Data pembayaran tidak valid');
+      return;
+    }
+    updateOrderDetails();
+    renderPaymentVisual();
+    startCountdown();
+    // start polling automatically to keep status fresh
+    startStatusChecking();
+    // ensure buttons show/hide correctly
+    if ((order.status || '').toLowerCase() !== 'pending') {
+      hideEl(btnCancel); hideEl(btnCheck);
+    }
+  }
+
+  // Clean up timers on page unload
+  window.addEventListener('beforeunload', () => {
+    if (statusChecker) clearInterval(statusChecker);
+    if (expiryTimer) clearInterval(expiryTimer);
+    if (transaksiStatusChecker) clearInterval(transaksiStatusChecker);
+  });
+
+  // Start
+  initPayment();
+</script>
+
+</body>
+</html>
