@@ -1,0 +1,22 @@
+{
+  "name": "unishop",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Full-stack topup project with Express.js, EJS, and Atlantic API integration",
+  "author": "Tn. Dani Joest, S.M.T., C.P.M.",
+  "main": "index.js",
+  "dependencies": {
+    "axios": "latest",
+    "body-parser": "latest",
+    "dotenv": "latest",
+    "ejs": "latest",
+    "express": "latest"
+  },
+  "devDependencies": {
+    "nodemon": "latest"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  }
+}
