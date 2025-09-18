@@ -1,0 +1,22 @@
+[
+  {
+    "id": "x6nY8mGxNHkzzu8mcAIP",
+    "reff_id": "B19D321FB516",
+    "nominal": 1814,
+    "type": "ewallet",
+    "method": "QRISFAST",
+    "status": "pending",
+    "created_at": "2025-09-17T18:27:44.355Z",
+    "expired_at": "2025-09-17T19:27:44.355Z",
+    "product": {
+      "name": "5 Diamonds",
+      "code": "MCG5",
+      "price": 1591,
+      "target": "628299715|10135"
+    },
+    "qr_string": "00020101021226610016ID.CO.SHOPEE.WWW01189360091800209988050208209988050303UME51440014ID.CO.QRIS.WWW0215ID20232405136140303UME52044814530336054071814.005802ID5905MITRA6012KOTA BANDUNG61054061462220518pay_0pnsEQdeUz979663045C83",
+    "qr_image": "https://atlantich2h.com/qr/x6nY8mGxNHkzzu8mcAIP",
+    "fee": 225,
+    "get_balance": 1589
+  }
+]
